@@ -1,9 +1,9 @@
 package com.waltsoft.tx_flow.exception.exception_handler;
 
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolationException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -20,49 +20,49 @@ import java.io.IOException;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class SecurityExceptionHandler extends ResponseEntityExceptionHandler {
 
-	private static final Log LOG = LogFactory.getLog(SecurityExceptionHandler.class);
+    private static final Log LOG = LogFactory.getLog(SecurityExceptionHandler.class);
 
 
-	@ExceptionHandler(value = Exception.class)
-	public void handle(final HttpServletResponse response,
-	                   final Exception exception,
-	                   final HandlerMethod handlerMethod) throws IOException {
-		handle(response, exception);
-	}
+    @ExceptionHandler(value = Exception.class)
+    public void handle(final HttpServletResponse response,
+                       final Exception exception,
+                       final HandlerMethod handlerMethod) throws IOException {
+        handle(response, exception);
+    }
 
-	void handle(final HttpServletResponse response, final Exception exception) throws IOException {
+    void handle(final HttpServletResponse response, final Exception exception) throws IOException {
 
-		switch (exception) {
+        switch (exception) {
 
-			case Exception e when isNotFound(e) -> sendError(response, HttpStatus.NOT_FOUND, e.getMessage());
+            case Exception e when isNotFound(e) -> sendError(response, HttpStatus.NOT_FOUND, e.getMessage());
 
-			case Exception ex when isBadRequest(ex) -> sendError(response, HttpStatus.BAD_REQUEST, ex.getMessage());
+            case Exception ex when isBadRequest(ex) -> sendError(response, HttpStatus.BAD_REQUEST, ex.getMessage());
 
-			default -> {
-				LOG.error(exception);
-				sendError(response, HttpStatus.INTERNAL_SERVER_ERROR);
-			}
-		}
-	}
+            default -> {
+                LOG.error(exception);
+                sendError(response, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }
+    }
 
-	private boolean isNotFound(final Exception exception) {
-		return exception instanceof NoResourceFoundException;
-	}
+    private boolean isNotFound(final Exception exception) {
+        return exception instanceof NoResourceFoundException;
+    }
 
-	private boolean isBadRequest(final Exception exception) {
-		return exception instanceof ConstraintViolationException || exception instanceof IllegalArgumentException || exception instanceof MethodArgumentNotValidException;
-	}
+    private boolean isBadRequest(final Exception exception) {
+        return exception instanceof ConstraintViolationException || exception instanceof IllegalArgumentException || exception instanceof MethodArgumentNotValidException;
+    }
 
-	private void sendError(final HttpServletResponse response, final HttpStatus status) throws IOException {
-		sendError(response, status, status.getReasonPhrase());
-	}
+    private void sendError(final HttpServletResponse response, final HttpStatus status) throws IOException {
+        sendError(response, status, status.getReasonPhrase());
+    }
 
-	private void sendError(final HttpServletResponse response,
-	                       final HttpStatus status,
-	                       final String msg) throws IOException {
+    private void sendError(final HttpServletResponse response,
+                           final HttpStatus status,
+                           final String msg) throws IOException {
 
-		if (! response.isCommitted()) {
-			response.sendError(status.value(), msg);
-		}
-	}
+        if (!response.isCommitted()) {
+            response.sendError(status.value(), msg);
+        }
+    }
 }
