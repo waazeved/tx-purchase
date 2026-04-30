@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle>
+  <file name="/home/waazeved/waltsoft/github/tx-flow/src/test/java/com/waltsoft/tx_flow/business/purchase/InsertTest.java">
+    <error severity="info" line="22" column="0" message="Remove this 'public' modifier." source="java:S5786" />
+  </file>
+</checkstyle>

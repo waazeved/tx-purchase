@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SecurityExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">tx_flow</a> &gt; <a href="index.source.html" class="el_package">com.waltsoft.tx_flow.exception.exception_handler</a> &gt; <span class="el_source">SecurityExceptionHandler.java</span></div><h1>SecurityExceptionHandler.java</h1><pre class="source lang-java linenums">package com.waltsoft.tx_flow.exception.exception_handler;
+
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.ConstraintViolationException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.io.IOException;
+
+@ControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
+<span class="fc" id="L21">public class SecurityExceptionHandler extends ResponseEntityExceptionHandler {</span>
+
+<span class="fc" id="L23">    private static final Log LOG = LogFactory.getLog(SecurityExceptionHandler.class);</span>
+
+
+    @ExceptionHandler(value = Exception.class)
+    public void handle(final HttpServletResponse response,
+                       final Exception exception,
+                       final HandlerMethod handlerMethod) throws IOException {
+<span class="fc" id="L30">        handle(response, exception);</span>
+<span class="fc" id="L31">    }</span>
+
+    void handle(final HttpServletResponse response, final Exception exception) throws IOException {
+
+<span class="fc bfc" id="L35" title="All 3 branches covered.">        switch (exception) {</span>
+
+<span class="fc bfc" id="L37" title="All 2 branches covered.">            case Exception e when isNotFound(e) -&gt; sendError(response, HttpStatus.NOT_FOUND, e.getMessage());</span>
+
+<span class="fc bfc" id="L39" title="All 2 branches covered.">            case Exception ex when isBadRequest(ex) -&gt; sendError(response, HttpStatus.BAD_REQUEST, ex.getMessage());</span>
+
+            default -&gt; {
+<span class="fc" id="L42">                LOG.error(exception);</span>
+<span class="fc" id="L43">                sendError(response, HttpStatus.INTERNAL_SERVER_ERROR);</span>
+<span class="fc" id="L44">            }</span>
+        }
+<span class="fc" id="L46">    }</span>
+
+    private boolean isNotFound(final Exception exception) {
+<span class="fc" id="L49">        return exception instanceof NoResourceFoundException;</span>
+    }
+
+    private boolean isBadRequest(final Exception exception) {
+<span class="fc bfc" id="L53" title="All 6 branches covered.">        return exception instanceof ConstraintViolationException || exception instanceof IllegalArgumentException || exception instanceof MethodArgumentNotValidException;</span>
+    }
+
+    private void sendError(final HttpServletResponse response, final HttpStatus status) throws IOException {
+<span class="fc" id="L57">        sendError(response, status, status.getReasonPhrase());</span>
+<span class="fc" id="L58">    }</span>
+
+    private void sendError(final HttpServletResponse response,
+                           final HttpStatus status,
+                           final String msg) throws IOException {
+
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (!response.isCommitted()) {</span>
+<span class="fc" id="L65">            response.sendError(status.value(), msg);</span>
+        }
+<span class="fc" id="L67">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.14.202510111229</span></div></body></html>
