@@ -12,11 +12,11 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
-class FindExchangeRatesByCurrencyAndStartDateAndEndDateTest {
+class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
 
     public static final String CURRENCY = "Brazil-Real";
-    public static final LocalDate START_DATE = LocalDate.now();
-    public static final LocalDate END_DATE = LocalDate.now();
+    public static final LocalDate START_DATE = LocalDate.of(2025, 12, 30);
+    public static final LocalDate END_DATE = LocalDate.of(2025, 12, 31);
     private MockWebServer mockWebServer;
     private ExchangeRateServiceImpl exchangeRateService;
 
@@ -44,27 +44,38 @@ class FindExchangeRatesByCurrencyAndStartDateAndEndDateTest {
     @Test
     @DisplayName("Should return list of rates with success")
     void shouldReturnExchangeRatesWithSuccess() {
+
+        String rate1 = "5.01";
+        String rate2 = "4.85";
+
         String jsonResponse = """
-                {
-                    "data": [
-                        {"record_date": "2023-12-31", "exchange_rate": "4.85"},
-                        {"record_date": "2023-09-30", "exchange_rate": "5.01"}
-                    ]
-                }
-                """;
+                 {
+                     "data": [
+                         {"record_date": "%s", "exchange_rate": "%s" },
+                         {"record_date": "%s", "exchange_rate": "%s"}
+                     ]
+                 }
+                """.formatted(START_DATE, rate1, END_DATE, rate2);
 
         mockWebServer.enqueue(new MockResponse()
                 .setBody(jsonResponse)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> result = exchangeRateService.findExchangeRatesByCurrencyAndStartDateAndEndDate(
+        List<ExchangeRate> exchangeRates = exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                 CURRENCY,
                 START_DATE, END_DATE);
 
-        Assertions.assertNotNull(result);
-        Assertions.assertEquals(2, result.size());
-        Assertions.assertEquals("4.85", result.get(0).rate());
-        Assertions.assertEquals(LocalDate.of(2023, 12, 31), result.get(0).date());
+        Assertions.assertNotNull(exchangeRates);
+        Assertions.assertEquals(2, exchangeRates.size());
+
+        ExchangeRate exchangeRate1 = exchangeRates.get(0);
+        ExchangeRate exchangeRate2 = exchangeRates.get(1);
+
+        Assertions.assertEquals(rate1, exchangeRate1.rate());
+        Assertions.assertEquals(START_DATE, exchangeRate1.date());
+
+        Assertions.assertEquals(rate2, exchangeRate2.rate());
+        Assertions.assertEquals(END_DATE, exchangeRate2.date());
     }
 
     @Test
@@ -82,7 +93,7 @@ class FindExchangeRatesByCurrencyAndStartDateAndEndDateTest {
                         """)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> result = exchangeRateService.findExchangeRatesByCurrencyAndStartDateAndEndDate(
+        List<ExchangeRate> result = exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                 CURRENCY, START_DATE, END_DATE);
 
         Assertions.assertEquals(1, result.size());
@@ -98,7 +109,7 @@ class FindExchangeRatesByCurrencyAndStartDateAndEndDateTest {
                         """)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> result = exchangeRateService.findExchangeRatesByCurrencyAndStartDateAndEndDate(
+        List<ExchangeRate> result = exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                 CURRENCY, START_DATE, END_DATE);
 
         Assertions.assertNotNull(result);
@@ -114,7 +125,7 @@ class FindExchangeRatesByCurrencyAndStartDateAndEndDateTest {
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
         Assertions.assertThrows(ExchangeRateApiException.class,
-                () -> exchangeRateService.findExchangeRatesByCurrencyAndStartDateAndEndDate(
+                () -> exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                         CURRENCY, START_DATE, END_DATE));
 
         Assertions.assertEquals(4, mockWebServer.getRequestCount());

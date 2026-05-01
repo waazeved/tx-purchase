@@ -47,7 +47,7 @@ class ExchangeRateServiceImpl {
         this.apiRequestBackoffDuration = apiRequestBackoffDuration;
     }
 
-    List<ExchangeRate> findExchangeRatesByCurrencyAndStartDateAndEndDate(String currency, LocalDate startDate, LocalDate endDate) {
+    List<ExchangeRate> findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(String currency, LocalDate startDate, LocalDate endDate) {
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path(API_PATH)
