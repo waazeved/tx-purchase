@@ -1,7 +1,7 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.ExchangeRateApiException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.ExchangeRateException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.*;
@@ -42,7 +42,7 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
     }
 
     @Test
-    @DisplayName("Should return list of rates with success")
+    @DisplayName("Should find exchange rates from API and return list of rates with success")
     void shouldReturnExchangeRatesWithSuccess() {
 
         String rate1 = "5.01";
@@ -79,7 +79,7 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
     }
 
     @Test
-    @DisplayName("Should trigger Retry and succeed on the second attempt")
+    @DisplayName("Should find exchange rates from API, trigger Retry and succeed on the second attempt")
     void shouldRetryAndSucceedOnSecondAttempt() {
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
@@ -101,7 +101,7 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
     }
 
     @Test
-    @DisplayName("Should return empty list if API finds no data")
+    @DisplayName("Should find exchange rates from API and return empty list if finds no data")
     void shouldReturnEmptyListWhenNoDataFound() {
         mockWebServer.enqueue(new MockResponse()
                 .setBody("""
@@ -117,14 +117,14 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
     }
 
     @Test
-    @DisplayName("Should throw ExchangeRateApiException after exhausting all Retries")
+    @DisplayName("Should find exchange rates from API and throw ExchangeRateApiException after exhausting all Retries")
     void shouldThrowExceptionAfterAllRetriesFail() {
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
-        Assertions.assertThrows(ExchangeRateApiException.class,
+        Assertions.assertThrows(ExchangeRateException.class,
                 () -> exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                         CURRENCY, START_DATE, END_DATE));
 
