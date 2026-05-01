@@ -1,4 +1,4 @@
-package com.waltsoft.tx_flow.entity.basic;
+package com.waltsoft.tx_purchase.entity.basic;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;

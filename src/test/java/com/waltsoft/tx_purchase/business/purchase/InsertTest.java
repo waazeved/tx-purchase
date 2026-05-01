@@ -1,8 +1,8 @@
-package com.waltsoft.tx_flow.business.purchase;
+package com.waltsoft.tx_purchase.business.purchase;
 
-import com.waltsoft.tx_flow.dto.purchase.PurchaseInsertDto;
-import com.waltsoft.tx_flow.entity.purchase.Purchase;
-import com.waltsoft.tx_flow.test_container.PostgreSQLContainerTest;
+import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
+import com.waltsoft.tx_purchase.entity.purchase.Purchase;
+import com.waltsoft.tx_purchase.test_container.PostgreSQLContainerTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,37 +21,37 @@ import java.util.stream.Stream;
 @Transactional
 class InsertTest extends PostgreSQLContainerTest {
 
+    private static final String DESCRIPTION = "New Purchase";
+    private static final LocalDate DATE = LocalDate.now();
+
     @Autowired
     private PurchaseServiceImpl purchaseService;
 
     @ParameterizedTest
-    @MethodSource("shouldInsertNewPurchase")
-    @DisplayName("Should insert new purchase")
-    void shouldInsertNewPurchase(BigDecimal amount, BigDecimal roundedAmount) {
-
-        String description = "New Purchase";
-        LocalDate date = LocalDate.now();
+    @MethodSource("shouldInsertNewPurchaseWithRoundedAmount")
+    @DisplayName("Should insert new purchase with rounded amount")
+    void shouldInsertNewPurchaseWithRoundedAmount(BigDecimal amount, BigDecimal roundedAmount) {
 
         PurchaseInsertDto insertDto = new PurchaseInsertDto(
-                description,
-                date,
+                DESCRIPTION,
+                DATE,
                 amount
         );
 
         UUID id = this.purchaseService.insert(insertDto);
 
-        Optional<Purchase> optionalPurchase = this.purchaseService.findById(id);
+        Optional<Purchase> purchaseOptional = this.purchaseService.findById(id);
 
-        Assertions.assertTrue(optionalPurchase.isPresent());
+        Assertions.assertTrue(purchaseOptional.isPresent());
 
-        Purchase purchase = optionalPurchase.get();
+        Purchase purchase = purchaseOptional.get();
 
-        Assertions.assertEquals(purchase.getDescription(), description);
-        Assertions.assertEquals(purchase.getDate(), date);
-        Assertions.assertEquals(purchase.getAmount(), roundedAmount);
+        Assertions.assertEquals(DESCRIPTION, purchase.getDescription());
+        Assertions.assertEquals(DATE, purchase.getDate());
+        Assertions.assertEquals(roundedAmount, purchase.getAmount());
     }
 
-    private static Stream<Arguments> shouldInsertNewPurchase() {
+    private static Stream<Arguments> shouldInsertNewPurchaseWithRoundedAmount() {
         return Stream.of(Arguments.of(new BigDecimal("15.00"), new BigDecimal("15.00")),
                 Arguments.of(new BigDecimal("30.05"), new BigDecimal("30.05")),
                 Arguments.of(new BigDecimal("60.555"), new BigDecimal("60.56")),
@@ -61,22 +61,20 @@ class InsertTest extends PostgreSQLContainerTest {
     }
 
     @Test
-    @DisplayName("Should maintain exact decimal precision during summation")
+    @DisplayName("Should insert new purchases and maintain exact decimal precision during summation")
     void shouldMaintainDecimalPrecisionDuringSummation() {
-        String description = "New Purchase";
-        LocalDate date = LocalDate.now();
         BigDecimal amount1 = new BigDecimal("0.1");
         BigDecimal amount2 = new BigDecimal("0.2");
 
         PurchaseInsertDto insertDto1 = new PurchaseInsertDto(
-                description,
-                date,
+                DESCRIPTION,
+                DATE,
                 amount1
         );
 
         PurchaseInsertDto insertDto2 = new PurchaseInsertDto(
-                description,
-                date,
+                DESCRIPTION,
+                DATE,
                 amount2
         );
 

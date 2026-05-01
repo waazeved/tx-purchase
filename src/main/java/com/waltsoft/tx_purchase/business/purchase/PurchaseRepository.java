@@ -1,7 +1,7 @@
-package com.waltsoft.tx_flow.business.purchase;
+package com.waltsoft.tx_purchase.business.purchase;
 
 
-import com.waltsoft.tx_flow.entity.purchase.Purchase;
+import com.waltsoft.tx_purchase.entity.purchase.Purchase;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

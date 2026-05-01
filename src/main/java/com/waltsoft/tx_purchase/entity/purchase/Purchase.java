@@ -1,6 +1,6 @@
-package com.waltsoft.tx_flow.entity.purchase;
+package com.waltsoft.tx_purchase.entity.purchase;
 
-import com.waltsoft.tx_flow.entity.basic.BasicEntity;
+import com.waltsoft.tx_purchase.entity.basic.BasicEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;

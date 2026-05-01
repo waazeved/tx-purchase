@@ -1,4 +1,4 @@
-package com.waltsoft.tx_flow.test_container;
+package com.waltsoft.tx_purchase.test_container;
 
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;

@@ -1,4 +1,4 @@
-package com.waltsoft.tx_flow.dto.purchase;
+package com.waltsoft.tx_purchase.dto.purchase;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

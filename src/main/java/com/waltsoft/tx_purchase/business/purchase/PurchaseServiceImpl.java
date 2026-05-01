@@ -1,8 +1,9 @@
-package com.waltsoft.tx_flow.business.purchase;
+package com.waltsoft.tx_purchase.business.purchase;
 
-import com.waltsoft.tx_flow.business.basic.BasicEntityService;
-import com.waltsoft.tx_flow.dto.purchase.PurchaseInsertDto;
-import com.waltsoft.tx_flow.entity.purchase.Purchase;
+import com.waltsoft.tx_purchase.business.basic.BasicEntityService;
+import com.waltsoft.tx_purchase.dto.purchase.PurchaseDto;
+import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
+import com.waltsoft.tx_purchase.entity.purchase.Purchase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
@@ -40,5 +41,16 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
 
     Optional<BigDecimal> sumAllAmounts() {
         return repository.sumAllAmounts();
+    }
+
+    public PurchaseDto findDtoById(UUID id) {
+        Optional<Purchase> purchaseOptional = findById(id);
+
+        if (purchaseOptional.isEmpty()) {
+            throw new IllegalArgumentException("Purchase id does not exist");
+        }
+
+        Purchase purchase = purchaseOptional.get();
+        return new PurchaseDto(purchase);
     }
 }
