@@ -73,8 +73,10 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
             throw makeUnavailableExchangeRateApiRuntimeException();
         }
 
-        LOG.error(String.format("Error on ExchangeRateService.convertAmountByCurrencyAndDate. Currency: %s, Date: %s. Amount: %s. Error: %s",
-                currency, date, amount, exception.getMessage()));
+        if (!(exception instanceof NoExchangeRateDataException)) {
+            LOG.error(String.format("Error on ExchangeRateService.convertAmountByCurrencyAndDate. Currency: %s, Date: %s. Amount: %s. Error: %s",
+                    currency, date, amount, exception.getMessage()));
+        }
 
         throw exception;
     }

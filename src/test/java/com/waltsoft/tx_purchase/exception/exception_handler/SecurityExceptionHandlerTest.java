@@ -1,5 +1,7 @@
 package com.waltsoft.tx_purchase.exception.exception_handler;
 
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +77,30 @@ class SecurityExceptionHandlerTest {
         return Stream.of(Arguments.of(illegalArgumentException, illegalArgumentExceptionMsg),
                 Arguments.of(constraintViolationException, constraintViolationExceptionMsg),
                 Arguments.of(methodArgumentNotValidException, methodArgumentNotValidExceptionMsg));
+    }
+
+    @Test
+    @DisplayName("422: Should intercept NoExchangeRateDataException and return Unprocessable Entity")
+    void shouldHandleUnprocessableEntityException() throws IOException {
+        String expectedMessage = "No exchange rate data available for the given parameters";
+        NoExchangeRateDataException exception = Mockito.mock(NoExchangeRateDataException.class);
+        Mockito.when(exception.getMessage()).thenReturn(expectedMessage);
+
+        handler.handle(response, exception, handlerMethod);
+
+        Mockito.verify(response).sendError(HttpStatus.UNPROCESSABLE_ENTITY.value(), expectedMessage);
+    }
+
+    @Test
+    @DisplayName("503: Should intercept UnavailableExchangeRateApiRuntimeException and return Service Unavailable")
+    void shouldHandleUnavailableServiceException() throws IOException {
+        String expectedMessage = "Exchange Rate API is currently down or unresponsive";
+        UnavailableExchangeRateApiRuntimeException exception = Mockito.mock(UnavailableExchangeRateApiRuntimeException.class);
+        Mockito.when(exception.getMessage()).thenReturn(expectedMessage);
+
+        handler.handle(response, exception, handlerMethod);
+
+        Mockito.verify(response).sendError(HttpStatus.SERVICE_UNAVAILABLE.value(), expectedMessage);
     }
 
     @Test

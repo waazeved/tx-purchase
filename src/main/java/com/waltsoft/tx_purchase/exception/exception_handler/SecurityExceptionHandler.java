@@ -1,5 +1,7 @@
 package com.waltsoft.tx_purchase.exception.exception_handler;
 
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.apache.commons.logging.Log;
@@ -36,7 +38,13 @@ public class SecurityExceptionHandler extends ResponseEntityExceptionHandler {
 
             case Exception e when isNotFound(e) -> sendError(response, HttpStatus.NOT_FOUND, e.getMessage());
 
-            case Exception ex when isBadRequest(ex) -> sendError(response, HttpStatus.BAD_REQUEST, ex.getMessage());
+            case Exception e when isBadRequest(e) -> sendError(response, HttpStatus.BAD_REQUEST, e.getMessage());
+
+            case Exception e when isUnprocessableEntity(e) ->
+                    sendError(response, HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage());
+
+            case Exception e when isUnavailableService(e) ->
+                    sendError(response, HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
 
             default -> {
                 LOG.error(exception);
@@ -51,6 +59,14 @@ public class SecurityExceptionHandler extends ResponseEntityExceptionHandler {
 
     private boolean isBadRequest(final Exception exception) {
         return exception instanceof ConstraintViolationException || exception instanceof IllegalArgumentException || exception instanceof MethodArgumentNotValidException;
+    }
+
+    private boolean isUnprocessableEntity(Exception exception) {
+        return exception instanceof NoExchangeRateDataException;
+    }
+
+    private boolean isUnavailableService(Exception exception) {
+        return exception instanceof UnavailableExchangeRateApiRuntimeException;
     }
 
     private void sendError(final HttpServletResponse response, final HttpStatus status) throws IOException {
