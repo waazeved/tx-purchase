@@ -1,7 +1,7 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.ExchangeRateException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
 import com.waltsoft.tx_purchase.dto.exchange_rate.UsaTreasuryExchangeRateDto;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,7 +36,7 @@ class FindExchangeRateValueByCurrencyAndDateTest {
 
     @Test
     @DisplayName("Should find exchange rates and return the most recent exchange rate when there are multiple results")
-    void shouldReturnMostRecentExchangeRate() {
+    void shouldReturnMostRecentExchangeRate() throws NoExchangeRateDataException {
 
         LocalDate targetDate = LocalDate.of(2026, 5, 10);
         LocalDate endDate = targetDate.minusMonths(ExchangeRateServiceImpl.MAX_EXCHANGE_RATES_PERIOD);
@@ -71,7 +71,7 @@ class FindExchangeRateValueByCurrencyAndDateTest {
     }
 
     @Test
-    @DisplayName("Should  find exchange rates and throw ExchangeRateException when API returns an empty list")
+    @DisplayName("Should find exchange rates and throw NoExchangeRateDataException when API returns an empty list")
     void shouldThrowExceptionWhenNoRatesFound() {
         LocalDate targetDate = LocalDate.now();
 
@@ -83,7 +83,7 @@ class FindExchangeRateValueByCurrencyAndDateTest {
                         ArgumentMatchers.any()
                 );
 
-        Assertions.assertThrows(ExchangeRateException.class,
+        Assertions.assertThrows(NoExchangeRateDataException.class,
                 () -> exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, targetDate));
     }
 }

@@ -2,7 +2,7 @@ package com.waltsoft.tx_purchase.business.purchase;
 
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
 import com.waltsoft.tx_purchase.entity.purchase.Purchase;
-import com.waltsoft.tx_purchase.test_container.PostgreSQLContainerTest;
+import com.waltsoft.tx_purchase.test_container.ContainerTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +19,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 @Transactional
-class InsertTest extends PostgreSQLContainerTest {
+class InsertTest extends ContainerTest {
 
     private static final String DESCRIPTION = "New Purchase";
     private static final LocalDate DATE = LocalDate.now();

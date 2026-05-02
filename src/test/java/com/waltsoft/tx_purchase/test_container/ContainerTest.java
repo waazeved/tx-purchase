@@ -9,7 +9,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @Testcontainers
 @ActiveProfiles("test")
-public abstract class PostgreSQLContainerTest {
+public abstract class ContainerTest {
 
     public static final String DOCKER_POSTGRES_IMAGE_NAME = "postgres:latest";
 

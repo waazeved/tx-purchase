@@ -1,7 +1,7 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.ExchangeRateException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.*;
@@ -124,7 +124,7 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
-        Assertions.assertThrows(ExchangeRateException.class,
+        Assertions.assertThrows(UnavailableExchangeRateApiRuntimeException.class,
                 () -> exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                         CURRENCY, START_DATE, END_DATE));
 

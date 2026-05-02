@@ -1,8 +1,11 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.ExchangeRateException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import com.waltsoft.tx_purchase.dto.exchange_rate.UsaTreasuryExchangeRateApiResponseDto;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,18 +55,36 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
     }
 
     @Override
-    public BigDecimal convertAmountByCurrencyAndDate(BigDecimal amount, String currency, LocalDate date) {
+    @CircuitBreaker(name = ExchangeRateResilienceConfig.CONVERT_CIRCUIT_BREAKER, fallbackMethod = "convertAmountByCurrencyAndDateFallback")
+    public BigDecimal convertAmountByCurrencyAndDate(BigDecimal amount, String currency, LocalDate date) throws NoExchangeRateDataException {
         BigDecimal exchangeRateValue = findExchangeRateValueByCurrencyAndDate(currency, date);
         BigDecimal convertedAmount = amount.multiply(exchangeRateValue);
         return convertedAmount.setScale(AMOUNT_ROUND_SCALE, RoundingMode.HALF_UP);
     }
 
-    BigDecimal findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
+    @SuppressWarnings({"java:S1172", "java:S112"})
+    private BigDecimal convertAmountByCurrencyAndDateFallback(
+            BigDecimal amount,
+            String currency,
+            LocalDate date,
+            Exception exception) throws Exception {
+
+        if (exception instanceof CallNotPermittedException) {
+            throw makeUnavailableExchangeRateApiRuntimeException();
+        }
+
+        LOG.error(String.format("Error on ExchangeRateService.convertAmountByCurrencyAndDate. Currency: %s, Date: %s. Amount: %s. Error: %s",
+                currency, date, amount, exception.getMessage()));
+
+        throw exception;
+    }
+
+    public BigDecimal findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) throws NoExchangeRateDataException {
         LocalDate endDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD);
         List<ExchangeRate> exchangeRates = findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(currency, date, endDate);
 
         if (exchangeRates.isEmpty()) {
-            throw new ExchangeRateException("There is no exchange rate for this date");
+            throw new NoExchangeRateDataException("There is no exchange rate data available for this date");
         }
 
         ExchangeRate exchangeRate = exchangeRates.stream()
@@ -83,7 +104,7 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
                 .retrieve()
                 .onStatus(
                         HttpStatusCode::isError,
-                        response -> Mono.error(new ExchangeRateException("USA Treasury API Error")))
+                        response -> Mono.error(new UnavailableExchangeRateApiRuntimeException("USA Treasury API Error")))
                 .bodyToMono(UsaTreasuryExchangeRateApiResponseDto.class)
                 .timeout(this.apiRequestTimeout)
                 .map(response -> response.data().stream()
@@ -93,11 +114,18 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
                 .retryWhen(Retry.backoff(this.apiRequestMaxAttempts, this.apiRequestBackoffDuration)
                         .filter(RuntimeException.class::isInstance)
                         .doBeforeRetry(retrySignal ->
-                                LOG.warn("Retrying request to USA Treasury API... Attempt: " + (retrySignal.totalRetries() + 1)))
+                                LOG.warn("Retrying request to USA Treasury exchange rate API... Attempt: " + (retrySignal.totalRetries() + 1)))
                 )
-                .onErrorResume(e -> Mono.error(
-                        new ExchangeRateException("All requests to USA Treasury API failed. Error: " + e.getMessage())
-                )).block();
+                .onErrorResume(e -> {
+                    LOG.error("All retries to USA Treasury exchange rate API failed. Error: " + e.getMessage());
+                    return Mono.error(
+                            makeUnavailableExchangeRateApiRuntimeException()
+                    );
+                }).block();
+    }
+
+    private UnavailableExchangeRateApiRuntimeException makeUnavailableExchangeRateApiRuntimeException() {
+        return new UnavailableExchangeRateApiRuntimeException("Exchange rate service is currently unavailable. Please try again later.");
     }
 
 }
