@@ -6,6 +6,6 @@ public interface ExchangeRate {
 
     LocalDate date();
 
-    String rate();
+    String value();
 
 }

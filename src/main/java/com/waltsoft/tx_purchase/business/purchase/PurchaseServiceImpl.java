@@ -16,7 +16,7 @@ import java.util.UUID;
 @Service
 class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchase, UUID> {
 
-    public static final int AMOUNT_ROUND_SACALE = 2;
+    private static final int AMOUNT_ROUND_SCALE = 2;
     private final PurchaseRepository repository;
 
     @Autowired
@@ -33,7 +33,7 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
     @Override
     public UUID insert(final PurchaseInsertDto insertDto) {
         BigDecimal amount = insertDto.amount();
-        BigDecimal roundedAmount = amount.setScale(AMOUNT_ROUND_SACALE, RoundingMode.HALF_UP);
+        BigDecimal roundedAmount = amount.setScale(AMOUNT_ROUND_SCALE, RoundingMode.HALF_UP);
         Purchase purchase = new Purchase(insertDto.description(), roundedAmount, insertDto.dateTime());
         repository.save(purchase);
         return purchase.getId();

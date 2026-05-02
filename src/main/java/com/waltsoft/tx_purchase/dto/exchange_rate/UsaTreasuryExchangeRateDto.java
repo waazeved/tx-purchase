@@ -11,7 +11,7 @@ public record UsaTreasuryExchangeRateDto(
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
         LocalDate date,
         @JsonProperty("exchange_rate")
-        String rate
+        String value
 ) implements ExchangeRate {
 }
 

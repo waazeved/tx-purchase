@@ -71,10 +71,10 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
         ExchangeRate exchangeRate1 = exchangeRates.get(0);
         ExchangeRate exchangeRate2 = exchangeRates.get(1);
 
-        Assertions.assertEquals(rate1, exchangeRate1.rate());
+        Assertions.assertEquals(rate1, exchangeRate1.value());
         Assertions.assertEquals(START_DATE, exchangeRate1.date());
 
-        Assertions.assertEquals(rate2, exchangeRate2.rate());
+        Assertions.assertEquals(rate2, exchangeRate2.value());
         Assertions.assertEquals(END_DATE, exchangeRate2.date());
     }
 

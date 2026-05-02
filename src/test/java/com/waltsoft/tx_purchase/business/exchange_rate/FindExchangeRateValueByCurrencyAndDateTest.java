@@ -11,12 +11,13 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
-class FindExchangeRateByCurrencyAndDateTest {
+class FindExchangeRateValueByCurrencyAndDateTest {
 
     public static final String CURRENCY = "Brazil-Real";
 
@@ -48,11 +49,11 @@ class FindExchangeRateByCurrencyAndDateTest {
         String rate2 = "5.00";
         String rate3 = "3.25";
 
-        ExchangeRate expectedExchangeRate = new UsaTreasuryExchangeRateDto(date1, rate1);
+        ExchangeRate exchangeRate1 = new UsaTreasuryExchangeRateDto(date1, rate1);
         ExchangeRate exchangeRate2 = new UsaTreasuryExchangeRateDto(date2, rate2);
         ExchangeRate exchangeRate3 = new UsaTreasuryExchangeRateDto(date3, rate3);
 
-        List<ExchangeRate> exchangeRates = List.of(expectedExchangeRate, exchangeRate2, exchangeRate3);
+        List<ExchangeRate> exchangeRates = List.of(exchangeRate1, exchangeRate2, exchangeRate3);
 
         Mockito.doReturn(exchangeRates)
                 .when(exchangeRateService)
@@ -62,10 +63,11 @@ class FindExchangeRateByCurrencyAndDateTest {
                         endDate
                 );
 
-        ExchangeRate result = exchangeRateService.findExchangeRateByCurrencyAndDate(CURRENCY, targetDate);
+        BigDecimal expectedExchangeRateValue = new BigDecimal(rate1);
+        BigDecimal exchangeRateValue = exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, targetDate);
 
-        Assertions.assertNotNull(result);
-        Assertions.assertEquals(expectedExchangeRate, result);
+        Assertions.assertNotNull(exchangeRateValue);
+        Assertions.assertEquals(expectedExchangeRateValue, exchangeRateValue);
     }
 
     @Test
@@ -82,6 +84,6 @@ class FindExchangeRateByCurrencyAndDateTest {
                 );
 
         Assertions.assertThrows(ExchangeRateException.class,
-                () -> exchangeRateService.findExchangeRateByCurrencyAndDate(CURRENCY, targetDate));
+                () -> exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, targetDate));
     }
 }
