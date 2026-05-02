@@ -1,6 +1,6 @@
 package com.waltsoft.tx_purchase.exception.exception_handler;
 
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataRuntimeException;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
@@ -62,7 +62,7 @@ public class SecurityExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     private boolean isUnprocessableEntity(Exception exception) {
-        return exception instanceof NoExchangeRateDataException;
+        return exception instanceof NoExchangeRateDataRuntimeException;
     }
 
     private boolean isUnavailableService(Exception exception) {

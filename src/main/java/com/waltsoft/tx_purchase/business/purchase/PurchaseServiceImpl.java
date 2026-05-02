@@ -1,6 +1,7 @@
 package com.waltsoft.tx_purchase.business.purchase;
 
 import com.waltsoft.tx_purchase.business.basic.BasicEntityService;
+import com.waltsoft.tx_purchase.business.exchange_rate.ExchangeRateService;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseDto;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
 import com.waltsoft.tx_purchase.entity.purchase.Purchase;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,11 +19,14 @@ import java.util.UUID;
 class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchase, UUID> {
 
     private static final int AMOUNT_ROUND_SCALE = 2;
+
     private final PurchaseRepository repository;
+    private final ExchangeRateService exchangeRateService;
 
     @Autowired
-    public PurchaseServiceImpl(final PurchaseRepository repository) {
+    public PurchaseServiceImpl(final PurchaseRepository repository, ExchangeRateService exchangeRateService) {
         this.repository = repository;
+        this.exchangeRateService = exchangeRateService;
     }
 
     @Override
@@ -43,7 +48,7 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
         return repository.sumAllAmounts();
     }
 
-    public PurchaseDto findDtoById(UUID id) {
+    public PurchaseDto findDtoByIdAndCurrency(UUID id, String currency) {
         Optional<Purchase> purchaseOptional = findById(id);
 
         if (purchaseOptional.isEmpty()) {
@@ -51,6 +56,12 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
         }
 
         Purchase purchase = purchaseOptional.get();
-        return new PurchaseDto(purchase);
+        BigDecimal amount = purchase.getAmount();
+        LocalDate date = purchase.getDate();
+
+        BigDecimal convertedAmount = this.exchangeRateService
+                .convertAmountByCurrencyAndDate(amount, currency, date);
+
+        return new PurchaseDto(purchase, convertedAmount);
     }
 }

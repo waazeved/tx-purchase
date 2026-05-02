@@ -1,6 +1,6 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataRuntimeException;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import com.waltsoft.tx_purchase.test_container.ContainerTest;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -16,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Optional;
 
 @Execution(ExecutionMode.SAME_THREAD)
 class ConvertAmountByCurrencyAndDateTest extends ContainerTest {
@@ -37,12 +38,14 @@ class ConvertAmountByCurrencyAndDateTest extends ContainerTest {
 
     @Test
     @DisplayName("Should convert amount by exchange rate data")
-    void shouldConvertAmountByCurrencyAndDate() throws NoExchangeRateDataException {
+    void shouldConvertAmountByCurrencyAndDate() throws NoExchangeRateDataRuntimeException {
         BigDecimal exchangeRateValue = new BigDecimal("2.05");
+        Optional<BigDecimal> exchangeRateValueOptional = Optional.of(exchangeRateValue);
         BigDecimal amount = new BigDecimal("100");
         BigDecimal expectedConvertedAmount = new BigDecimal("205.00");
 
-        Mockito.doReturn(exchangeRateValue)
+
+        Mockito.doReturn(exchangeRateValueOptional)
                 .when(exchangeRateService)
                 .findExchangeRateValueByCurrencyAndDate(
                         CURRENCY,
@@ -58,29 +61,30 @@ class ConvertAmountByCurrencyAndDateTest extends ContainerTest {
 
     @Test
     @DisplayName("Should throw NoExchangeRateDataException when there is no exchange rate data available for a specific currency and date")
-    void shouldReturnExceptionWhenThereIsNoExchangeRateData() throws NoExchangeRateDataException {
+    void shouldReturnExceptionWhenThereIsNoExchangeRateData() throws NoExchangeRateDataRuntimeException {
         BigDecimal amount = new BigDecimal("10.00");
 
-        Mockito.doThrow(new NoExchangeRateDataException("No data"))
+        Mockito.doThrow(new NoExchangeRateDataRuntimeException("No data"))
                 .when(exchangeRateService)
                 .findExchangeRateValueByCurrencyAndDate(
                         CURRENCY,
                         DATE
                 );
 
-        Assertions.assertThrows(NoExchangeRateDataException.class, () -> this.exchangeRateService
+        Assertions.assertThrows(NoExchangeRateDataRuntimeException.class, () -> this.exchangeRateService
                 .convertAmountByCurrencyAndDate(amount, CURRENCY, DATE));
     }
 
     @Test
     @DisplayName("Should circuit break when exchange rate API failure exceeds limits defined in ExchangeRateResilienceConfig.registerExchangeRateCircuitBreaker")
-    void shouldOpenCircuitWhenFailureRateExceedsThreshold() throws NoExchangeRateDataException {
+    void shouldOpenCircuitWhenFailureRateExceedsThreshold() throws NoExchangeRateDataRuntimeException {
         BigDecimal amount = new BigDecimal("10");
+        Optional<BigDecimal> amountOptional = Optional.of(amount);
 
         Mockito.doThrow(new UnavailableExchangeRateApiRuntimeException("API Fail"))
                 .doThrow(new UnavailableExchangeRateApiRuntimeException("API Fail"))
-                .doReturn(amount)
-                .doReturn(amount)
+                .doReturn(amountOptional)
+                .doReturn(amountOptional)
                 .doThrow(new UnavailableExchangeRateApiRuntimeException("API Fail"))
                 .when(exchangeRateService)
                 .findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE);

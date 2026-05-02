@@ -1,7 +1,7 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataRuntimeException;
 import com.waltsoft.tx_purchase.dto.exchange_rate.UsaTreasuryExchangeRateDto;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,10 +16,11 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 class FindExchangeRateValueByCurrencyAndDateTest {
 
-    public static final String CURRENCY = "Brazil-Real";
+    private static final String CURRENCY = "Brazil-Real";
 
     private ExchangeRateServiceImpl exchangeRateService;
 
@@ -36,7 +37,7 @@ class FindExchangeRateValueByCurrencyAndDateTest {
 
     @Test
     @DisplayName("Should find exchange rates and return the most recent exchange rate when there are multiple results")
-    void shouldReturnMostRecentExchangeRate() throws NoExchangeRateDataException {
+    void shouldReturnMostRecentExchangeRate() throws NoExchangeRateDataRuntimeException {
 
         LocalDate targetDate = LocalDate.of(2026, 5, 10);
         LocalDate endDate = targetDate.minusMonths(ExchangeRateServiceImpl.MAX_EXCHANGE_RATES_PERIOD);
@@ -64,14 +65,14 @@ class FindExchangeRateValueByCurrencyAndDateTest {
                 );
 
         BigDecimal expectedExchangeRateValue = new BigDecimal(rate1);
-        BigDecimal exchangeRateValue = exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, targetDate);
+        Optional<BigDecimal> exchangeRateValueOptional = exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, targetDate);
 
-        Assertions.assertNotNull(exchangeRateValue);
-        Assertions.assertEquals(expectedExchangeRateValue, exchangeRateValue);
+        Assertions.assertTrue(exchangeRateValueOptional.isPresent());
+        Assertions.assertEquals(expectedExchangeRateValue, exchangeRateValueOptional.get());
     }
 
     @Test
-    @DisplayName("Should find exchange rates and throw NoExchangeRateDataException when API returns an empty list")
+    @DisplayName("Should return empty Optional when there is no exchange rate for date")
     void shouldThrowExceptionWhenNoRatesFound() {
         LocalDate targetDate = LocalDate.now();
 
@@ -83,7 +84,9 @@ class FindExchangeRateValueByCurrencyAndDateTest {
                         ArgumentMatchers.any()
                 );
 
-        Assertions.assertThrows(NoExchangeRateDataException.class,
-                () -> exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, targetDate));
+        Optional<BigDecimal> exchangeRateValueOptional = exchangeRateService
+                .findExchangeRateValueByCurrencyAndDate(CURRENCY, targetDate);
+
+        Assertions.assertTrue(exchangeRateValueOptional.isEmpty());
     }
 }

@@ -1,6 +1,6 @@
 package com.waltsoft.tx_purchase.exception.exception_handler;
 
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataRuntimeException;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
@@ -83,7 +83,7 @@ class SecurityExceptionHandlerTest {
     @DisplayName("422: Should intercept NoExchangeRateDataException and return Unprocessable Entity")
     void shouldHandleUnprocessableEntityException() throws IOException {
         String expectedMessage = "No exchange rate data available for the given parameters";
-        NoExchangeRateDataException exception = Mockito.mock(NoExchangeRateDataException.class);
+        NoExchangeRateDataRuntimeException exception = Mockito.mock(NoExchangeRateDataRuntimeException.class);
         Mockito.when(exception.getMessage()).thenReturn(expectedMessage);
 
         handler.handle(response, exception, handlerMethod);

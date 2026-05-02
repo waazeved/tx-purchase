@@ -1,7 +1,7 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataException;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataRuntimeException;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import com.waltsoft.tx_purchase.dto.exchange_rate.UsaTreasuryExchangeRateApiResponseDto;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 class ExchangeRateServiceImpl implements ExchangeRateService {
@@ -56,10 +57,21 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
 
     @Override
     @CircuitBreaker(name = ExchangeRateResilienceConfig.CONVERT_CIRCUIT_BREAKER, fallbackMethod = "convertAmountByCurrencyAndDateFallback")
-    public BigDecimal convertAmountByCurrencyAndDate(BigDecimal amount, String currency, LocalDate date) throws NoExchangeRateDataException {
-        BigDecimal exchangeRateValue = findExchangeRateValueByCurrencyAndDate(currency, date);
+    public BigDecimal convertAmountByCurrencyAndDate(BigDecimal amount, String currency, LocalDate date) throws NoExchangeRateDataRuntimeException {
+
+        Optional<BigDecimal> exchangeRateValueOptional =
+                findExchangeRateValueByCurrencyAndDate(currency, date);
+
+        if (exchangeRateValueOptional.isEmpty()) {
+            throw new NoExchangeRateDataRuntimeException("There is no exchange rate data available for this date");
+        }
+
+        BigDecimal exchangeRateValue = exchangeRateValueOptional.get();
+
         BigDecimal convertedAmount = amount.multiply(exchangeRateValue);
-        return convertedAmount.setScale(AMOUNT_ROUND_SCALE, RoundingMode.HALF_UP);
+        convertedAmount = convertedAmount.setScale(AMOUNT_ROUND_SCALE, RoundingMode.HALF_UP);
+
+        return convertedAmount;
     }
 
     @SuppressWarnings({"java:S1172", "java:S112"})
@@ -73,7 +85,7 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
             throw makeUnavailableExchangeRateApiRuntimeException();
         }
 
-        if (!(exception instanceof NoExchangeRateDataException)) {
+        if (!(exception instanceof NoExchangeRateDataRuntimeException)) {
             LOG.error(String.format("Error on ExchangeRateService.convertAmountByCurrencyAndDate. Currency: %s, Date: %s. Amount: %s. Error: %s",
                     currency, date, amount, exception.getMessage()));
         }
@@ -81,19 +93,21 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
         throw exception;
     }
 
-    public BigDecimal findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) throws NoExchangeRateDataException {
+    public Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
         LocalDate endDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD);
         List<ExchangeRate> exchangeRates = findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(currency, date, endDate);
 
         if (exchangeRates.isEmpty()) {
-            throw new NoExchangeRateDataException("There is no exchange rate data available for this date");
+            return Optional.empty();
         }
 
         ExchangeRate exchangeRate = exchangeRates.stream()
                 .max(Comparator.comparing(ExchangeRate::date))
                 .orElseThrow();
 
-        return new BigDecimal(exchangeRate.value());
+        BigDecimal exchangeRateValue = new BigDecimal(exchangeRate.value());
+
+        return Optional.of(exchangeRateValue);
     }
 
     List<ExchangeRate> findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(String currency, LocalDate startDate, LocalDate endDate) {
