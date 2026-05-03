@@ -48,6 +48,7 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
         return repository.sumAllAmounts();
     }
 
+    @Override
     public PurchaseDto findDtoByIdAndCurrency(UUID id, String currency) {
         Optional<Purchase> purchaseOptional = findById(id);
 
