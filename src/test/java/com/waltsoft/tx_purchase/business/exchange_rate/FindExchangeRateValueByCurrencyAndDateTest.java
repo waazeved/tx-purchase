@@ -40,7 +40,7 @@ class FindExchangeRateValueByCurrencyAndDateTest {
     void shouldReturnMostRecentExchangeRate() throws NoExchangeRateDataRuntimeException {
 
         LocalDate targetDate = LocalDate.of(2026, 5, 10);
-        LocalDate endDate = targetDate.minusMonths(ExchangeRateServiceImpl.MAX_EXCHANGE_RATES_PERIOD);
+        LocalDate startDate = targetDate.minusMonths(ExchangeRateServiceImpl.MAX_EXCHANGE_RATES_PERIOD);
 
         LocalDate date1 = targetDate.minusMonths(1);
         LocalDate date2 = date1.minusDays(1);
@@ -60,8 +60,8 @@ class FindExchangeRateValueByCurrencyAndDateTest {
                 .when(exchangeRateService)
                 .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                         CURRENCY,
-                        targetDate,
-                        endDate
+                        startDate,
+                        targetDate
                 );
 
         BigDecimal expectedExchangeRateValue = new BigDecimal(rate1);
@@ -80,8 +80,8 @@ class FindExchangeRateValueByCurrencyAndDateTest {
                 .when(exchangeRateService)
                 .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                         ArgumentMatchers.eq(CURRENCY),
-                        ArgumentMatchers.eq(targetDate),
-                        ArgumentMatchers.any()
+                        ArgumentMatchers.any(),
+                        ArgumentMatchers.eq(targetDate)
                 );
 
         Optional<BigDecimal> exchangeRateValueOptional = exchangeRateService

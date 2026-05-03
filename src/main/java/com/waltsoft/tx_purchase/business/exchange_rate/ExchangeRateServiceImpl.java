@@ -43,7 +43,7 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
     @Autowired
     public ExchangeRateServiceImpl(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.baseUrl(API_BASE_URL).build();
-        this.apiRequestTimeout = Duration.ofSeconds(2);
+        this.apiRequestTimeout = Duration.ofSeconds(8);
         this.apiRequestMaxAttempts = 3;
         this.apiRequestBackoffDuration = Duration.ofSeconds(2);
     }
@@ -93,9 +93,11 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
         throw exception;
     }
 
-    public Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
-        LocalDate endDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD);
-        List<ExchangeRate> exchangeRates = findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(currency, date, endDate);
+    Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
+        LocalDate startDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD);
+
+        List<ExchangeRate> exchangeRates =
+                findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(currency, startDate, date);
 
         if (exchangeRates.isEmpty()) {
             return Optional.empty();
