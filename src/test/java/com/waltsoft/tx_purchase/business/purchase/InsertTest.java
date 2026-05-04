@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 @Transactional
 class InsertTest extends ContainerTest {
 
-    private static final String DESCRIPTION = "New Purchase";
+    private static final String DESCRIPTION = "  New Purchase  ";
     private static final LocalDate DATE = LocalDate.now();
 
     @Autowired
@@ -46,7 +46,7 @@ class InsertTest extends ContainerTest {
 
         Purchase purchase = purchaseOptional.get();
 
-        Assertions.assertEquals(DESCRIPTION, purchase.getDescription());
+        Assertions.assertEquals(DESCRIPTION.trim(), purchase.getDescription());
         Assertions.assertEquals(DATE, purchase.getDate());
         Assertions.assertEquals(roundedAmount, purchase.getAmount());
     }

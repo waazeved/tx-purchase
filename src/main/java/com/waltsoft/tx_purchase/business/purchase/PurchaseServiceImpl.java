@@ -39,7 +39,10 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
     public UUID insert(final PurchaseInsertDto insertDto) {
         BigDecimal amount = insertDto.amount();
         BigDecimal roundedAmount = amount.setScale(AMOUNT_ROUND_SCALE, RoundingMode.HALF_UP);
-        Purchase purchase = new Purchase(insertDto.description(), roundedAmount, insertDto.dateTime());
+
+        String description = insertDto.description().trim();
+
+        Purchase purchase = new Purchase(description, roundedAmount, insertDto.dateTime());
         repository.save(purchase);
         return purchase.getId();
     }
