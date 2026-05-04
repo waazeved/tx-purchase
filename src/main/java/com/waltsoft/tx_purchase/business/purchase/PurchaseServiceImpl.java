@@ -2,6 +2,7 @@ package com.waltsoft.tx_purchase.business.purchase;
 
 import com.waltsoft.tx_purchase.business.basic.BasicEntityService;
 import com.waltsoft.tx_purchase.business.exchange_rate.ExchangeRateService;
+import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataRuntimeException;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseDto;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertedDto;
@@ -20,6 +21,7 @@ import java.util.UUID;
 class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchase, UUID> {
 
     private static final int AMOUNT_ROUND_SCALE = 2;
+    private static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_UP;
 
     private final PurchaseRepository repository;
     private final ExchangeRateService exchangeRateService;
@@ -64,9 +66,17 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
         BigDecimal amount = purchase.getAmount();
         LocalDate date = purchase.getDate();
 
-        BigDecimal convertedAmount = this.exchangeRateService
-                .convertAmountByCurrencyAndDate(amount, currency, date);
+        Optional<BigDecimal> exchangeRateValueOptional =
+                this.exchangeRateService.findExchangeRateValueByCurrencyAndDate(currency, date);
 
-        return new PurchaseDto(purchase, convertedAmount);
+        if (exchangeRateValueOptional.isEmpty()) {
+            throw new NoExchangeRateDataRuntimeException("There is no exchange rate data available for this date");
+        }
+
+        BigDecimal exchangeRateValue = exchangeRateValueOptional.get();
+        BigDecimal convertedAmount = amount.multiply(exchangeRateValue);
+        convertedAmount = convertedAmount.setScale(AMOUNT_ROUND_SCALE, ROUNDING_MODE);
+
+        return new PurchaseDto(purchase, exchangeRateValue, convertedAmount);
     }
 }

@@ -12,15 +12,17 @@ public record PurchaseDto(
         String description,
         LocalDate date,
         BigDecimal amount,
+        BigDecimal exchangeRateValue,
         BigDecimal convertedAmount
 ) implements Serializable {
 
-    public PurchaseDto(Purchase purchase, BigDecimal convertedAmount) {
+    public PurchaseDto(Purchase purchase, BigDecimal exchangeRateValue, BigDecimal convertedAmount) {
         this(
                 purchase.getId(),
                 purchase.getDescription(),
                 purchase.getDate(),
                 purchase.getAmount(),
+                exchangeRateValue,
                 convertedAmount
         );
     }

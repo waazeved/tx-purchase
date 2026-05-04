@@ -51,12 +51,15 @@ class FindPurchaseByIdAndCurrencyTest {
         LocalDate date = LocalDate.now();
         BigDecimal amount = new BigDecimal("499.99");
         BigDecimal convertedAmount = new BigDecimal("1000.99");
+        BigDecimal exchangeRateValue = new BigDecimal("5.1");
+
 
         PurchaseDto expectedDto = new PurchaseDto(
                 id,
                 description,
                 date,
                 amount,
+                exchangeRateValue,
                 convertedAmount
         );
 
@@ -70,6 +73,7 @@ class FindPurchaseByIdAndCurrencyTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("$.description").value(description))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.date").value(date.toString()))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.amount").value(amount.doubleValue()))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.exchangeRateValue").value(exchangeRateValue.doubleValue()))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.convertedAmount").value(convertedAmount.doubleValue()));
     }
 

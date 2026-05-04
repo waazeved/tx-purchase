@@ -1,7 +1,6 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
-import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataRuntimeException;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import com.waltsoft.tx_purchase.dto.exchange_rate.UsaTreasuryExchangeRateApiResponseDto;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
@@ -16,7 +15,6 @@ import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -26,8 +24,7 @@ import java.util.Optional;
 @Service
 class ExchangeRateServiceImpl implements ExchangeRateService {
 
-    public static final int MAX_EXCHANGE_RATES_PERIOD = 6;
-    private static final int AMOUNT_ROUND_SCALE = 2;
+    public static final int MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS = 6;
     private static final String API_BASE_URL = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1";
     private static final String API_PATH = "/accounting/od/rates_of_exchange";
     private static final String FILTER_PARAM = "filter";
@@ -56,45 +53,9 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
     }
 
     @Override
-    @CircuitBreaker(name = ExchangeRateResilienceConfig.CONVERT_CIRCUIT_BREAKER, fallbackMethod = "convertAmountByCurrencyAndDateFallback")
-    public BigDecimal convertAmountByCurrencyAndDate(BigDecimal amount, String currency, LocalDate date) throws NoExchangeRateDataRuntimeException {
-
-        Optional<BigDecimal> exchangeRateValueOptional =
-                findExchangeRateValueByCurrencyAndDate(currency, date);
-
-        if (exchangeRateValueOptional.isEmpty()) {
-            throw new NoExchangeRateDataRuntimeException("There is no exchange rate data available for this date");
-        }
-
-        BigDecimal exchangeRateValue = exchangeRateValueOptional.get();
-
-        BigDecimal convertedAmount = amount.multiply(exchangeRateValue);
-        convertedAmount = convertedAmount.setScale(AMOUNT_ROUND_SCALE, RoundingMode.HALF_UP);
-
-        return convertedAmount;
-    }
-
-    @SuppressWarnings({"java:S1172", "java:S112"})
-    private BigDecimal convertAmountByCurrencyAndDateFallback(
-            BigDecimal amount,
-            String currency,
-            LocalDate date,
-            Exception exception) throws Exception {
-
-        if (exception instanceof CallNotPermittedException) {
-            throw makeUnavailableExchangeRateApiRuntimeException();
-        }
-
-        if (!(exception instanceof NoExchangeRateDataRuntimeException)) {
-            LOG.error(String.format("Error on ExchangeRateService.convertAmountByCurrencyAndDate. Currency: %s, Date: %s. Amount: %s. Error: %s",
-                    currency, date, amount, exception.getMessage()));
-        }
-
-        throw exception;
-    }
-
-    Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
-        LocalDate startDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD);
+    @CircuitBreaker(name = ExchangeRateResilienceConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER, fallbackMethod = "fallback")
+    public Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
+        LocalDate startDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS);
 
         List<ExchangeRate> exchangeRates =
                 findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(currency, startDate, date);
@@ -110,6 +71,20 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
         BigDecimal exchangeRateValue = new BigDecimal(exchangeRate.value());
 
         return Optional.of(exchangeRateValue);
+    }
+
+    @SuppressWarnings({"java:S1172", "java:S112"})
+    public Optional<BigDecimal> fallback(
+            String currency, LocalDate date, Exception exception) throws Exception {
+
+        if (exception instanceof CallNotPermittedException) {
+            throw makeUnavailableExchangeRateApiRuntimeException();
+        }
+
+        LOG.error(String.format("Error on ExchangeRateService.convertAmountByCurrencyAndDate. Currency: %s, Date: %s. Error: %s",
+                currency, date, exception.getMessage()));
+
+        throw exception;
     }
 
     List<ExchangeRate> findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(String currency, LocalDate startDate, LocalDate endDate) {

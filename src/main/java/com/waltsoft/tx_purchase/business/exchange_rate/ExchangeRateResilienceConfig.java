@@ -11,21 +11,25 @@ import java.time.Duration;
 @Configuration
 class ExchangeRateResilienceConfig {
 
-    public static final String CONVERT_CIRCUIT_BREAKER = "usaTreasuryExchangeRateApiCircuitBreaker";
+    public static final String FIND_EXCHANGE_RATE_CIRCUIT_BREAKER = "findExchangeRateCircuitBreaker";
+    public static final int FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_MIN_NUMBER_OF_CALLS = 10;
+    public static final int FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD = 50;
+    public static final int FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE = 5;
 
     @Bean
-    public String registerExchangeRateCircuitBreaker(CircuitBreakerRegistry registry) {
+    public String registerFindExchangeRateCircuitBreaker(CircuitBreakerRegistry registry) {
+
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
                 .recordExceptions(UnavailableExchangeRateApiRuntimeException.class)
-                .failureRateThreshold(50)
-                .slidingWindowSize(5)
+                .failureRateThreshold(FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD)
+                .slidingWindowSize(FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE)
                 .waitDurationInOpenState(Duration.ofMinutes(1))
                 .permittedNumberOfCallsInHalfOpenState(2)
-                .minimumNumberOfCalls(5)
+                .minimumNumberOfCalls(FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_MIN_NUMBER_OF_CALLS)
                 .build();
 
-        registry.circuitBreaker(CONVERT_CIRCUIT_BREAKER, config);
+        registry.circuitBreaker(FIND_EXCHANGE_RATE_CIRCUIT_BREAKER, config);
 
-        return CONVERT_CIRCUIT_BREAKER;
+        return FIND_EXCHANGE_RATE_CIRCUIT_BREAKER;
     }
 }
