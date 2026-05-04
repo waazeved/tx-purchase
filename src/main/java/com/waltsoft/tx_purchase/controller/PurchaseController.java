@@ -3,6 +3,7 @@ package com.waltsoft.tx_purchase.controller;
 import com.waltsoft.tx_purchase.business.purchase.PurchaseService;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseDto;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
+import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertedDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -36,12 +37,13 @@ public class PurchaseController {
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation error in the sent data (e.g., null values or amounts below 0.01)", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Unexpected server error", content = @Content)
     })
-    public ResponseEntity<UUID> insertPurchase(
+    public ResponseEntity<PurchaseInsertedDto> insertPurchase(
             @Valid
             @RequestBody
             PurchaseInsertDto insertDto) {
-        UUID id = purchaseService.insert(insertDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(id);
+
+        PurchaseInsertedDto insertedDto = purchaseService.insert(insertDto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(insertedDto);
     }
 
     @GetMapping("/{id}/currency/{currency}")

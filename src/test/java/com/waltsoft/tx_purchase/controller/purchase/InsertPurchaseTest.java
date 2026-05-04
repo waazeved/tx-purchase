@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.waltsoft.tx_purchase.business.purchase.PurchaseService;
 import com.waltsoft.tx_purchase.controller.PurchaseController;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
+import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertedDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -47,7 +48,8 @@ class InsertPurchaseTest {
     @Test
     @DisplayName("Should insert purchase successfully and return status 201 Created")
     void shouldInsertPurchaseSuccessfully() throws Exception {
-        UUID expectedId = UUID.randomUUID();
+        PurchaseInsertedDto expectedInsertedDto = new PurchaseInsertedDto(UUID.randomUUID());
+        String expectedInsertedDtoAsJson = objectMapper.writeValueAsString(expectedInsertedDto);
 
         PurchaseInsertDto insertDto = new PurchaseInsertDto(
                 "PlayStation",
@@ -56,28 +58,94 @@ class InsertPurchaseTest {
         );
 
         Mockito.when(purchaseService.insert(ArgumentMatchers.any(PurchaseInsertDto.class)))
-                .thenReturn(expectedId);
+                .thenReturn(expectedInsertedDto);
 
         mockMvc.perform(MockMvcRequestBuilders.post(PurchaseController.PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(insertDto)))
                 .andExpect(MockMvcResultMatchers.status().isCreated())
-                .andExpect(MockMvcResultMatchers.content().string("\"" + expectedId + "\""));
+                .andExpect(MockMvcResultMatchers.content().string(expectedInsertedDtoAsJson));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"0.00", "-0.01", "-1.00", "-50.00"})
-    @DisplayName("Should return 400 Bad Request when amount is 0 or negative")
-    void shouldReturnBadRequestWhenAmountIsInvalid(String amountValue) throws Exception {
-        PurchaseInsertDto invalidDto = new PurchaseInsertDto(
-                "Samsung Galaxy",
-                LocalDate.now(),
-                new BigDecimal(amountValue)
-        );
+    @ValueSource(strings = {
+            "null",
+            "\"2024-13-01\"",
+            "\"01/01/2024\"",
+            "\"not-a-date\"",
+            "\"2024-02-30\"",
+            "\"\"",
+            "\" \""
+    })
+    @DisplayName("Should return 400 Bad Request when date is invalid")
+    void shouldReturnBadRequestWhenDateIsInvalid(String date) throws Exception {
+        String json = """
+                {
+                    "description": "Sneakers",
+                    "date": %s,
+                    "amount": 10.00
+                }
+                """.formatted(date);
 
         mockMvc.perform(MockMvcRequestBuilders.post(PurchaseController.PATH)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalidDto)))
+                        .content(json))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+
+        Mockito.verifyNoInteractions(purchaseService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "null",
+            "\" \"",
+            "\"\"",
+            "10.00",
+            "10"
+    })
+    @DisplayName("Should return 400 Bad Request when description is invalid")
+    void shouldReturnBadRequestWhenDescriptionIsInvalid(String description) throws Exception {
+        String json = """
+                {
+                    "description": %s,
+                    "date": "2026-05-03",
+                    "amount": 10.00
+                }
+                """.formatted(description);
+
+        mockMvc.perform(MockMvcRequestBuilders.post(PurchaseController.PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+
+        Mockito.verifyNoInteractions(purchaseService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "null",
+            "\" \"",
+            "\"\"",
+            "\"10.00\"",
+            "\"10\"",
+            "0.00",
+            "-0.01",
+            "-1.00",
+            "-50.00"
+    })
+    @DisplayName("Should return 400 Bad Request when amount is invalid")
+    void shouldReturnBadRequestWhenAmountIsInvalid(String amount) throws Exception {
+        String json = """
+                {
+                    "description": "Nike Sneakers",
+                    "date": "2026-05-03",
+                    "amount": %s
+                }
+                """.formatted(amount);
+
+        mockMvc.perform(MockMvcRequestBuilders.post(PurchaseController.PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
 
         Mockito.verifyNoInteractions(purchaseService);
