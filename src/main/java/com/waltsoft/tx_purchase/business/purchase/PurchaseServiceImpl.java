@@ -4,6 +4,7 @@ import com.waltsoft.tx_purchase.business.basic.BasicEntityService;
 import com.waltsoft.tx_purchase.business.exchange_rate.ExchangeRateService;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseDto;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
+import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertedDto;
 import com.waltsoft.tx_purchase.entity.purchase.Purchase;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -36,7 +37,7 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
 
 
     @Override
-    public UUID insert(final PurchaseInsertDto insertDto) {
+    public PurchaseInsertedDto insert(final PurchaseInsertDto insertDto) {
         BigDecimal amount = insertDto.amount();
         BigDecimal roundedAmount = amount.setScale(AMOUNT_ROUND_SCALE, RoundingMode.HALF_UP);
 
@@ -44,7 +45,7 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
 
         Purchase purchase = new Purchase(description, roundedAmount, insertDto.dateTime());
         repository.save(purchase);
-        return purchase.getId();
+        return new PurchaseInsertedDto(purchase.getId());
     }
 
     Optional<BigDecimal> sumAllAmounts() {

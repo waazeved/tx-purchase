@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.waltsoft.tx_purchase.business.purchase.PurchaseService;
 import com.waltsoft.tx_purchase.controller.PurchaseController;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
+import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertedDto;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -47,7 +48,8 @@ class InsertPurchaseTest {
     @Test
     @DisplayName("Should insert purchase successfully and return status 201 Created")
     void shouldInsertPurchaseSuccessfully() throws Exception {
-        UUID expectedId = UUID.randomUUID();
+        PurchaseInsertedDto expectedInsertedDto = new PurchaseInsertedDto(UUID.randomUUID());
+        String expectedInsertedDtoAsJson = objectMapper.writeValueAsString(expectedInsertedDto);
 
         PurchaseInsertDto insertDto = new PurchaseInsertDto(
                 "PlayStation",
@@ -56,13 +58,13 @@ class InsertPurchaseTest {
         );
 
         Mockito.when(purchaseService.insert(ArgumentMatchers.any(PurchaseInsertDto.class)))
-                .thenReturn(expectedId);
+                .thenReturn(expectedInsertedDto);
 
         mockMvc.perform(MockMvcRequestBuilders.post(PurchaseController.PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(insertDto)))
                 .andExpect(MockMvcResultMatchers.status().isCreated())
-                .andExpect(MockMvcResultMatchers.content().string("\"" + expectedId + "\""));
+                .andExpect(MockMvcResultMatchers.content().string(expectedInsertedDtoAsJson));
     }
 
     @ParameterizedTest

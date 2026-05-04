@@ -1,6 +1,7 @@
 package com.waltsoft.tx_purchase.business.purchase;
 
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
+import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertedDto;
 import com.waltsoft.tx_purchase.entity.purchase.Purchase;
 import com.waltsoft.tx_purchase.test_container.ContainerTest;
 import org.junit.jupiter.api.Assertions;
@@ -15,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Stream;
 
 @Transactional
@@ -38,9 +38,9 @@ class InsertTest extends ContainerTest {
                 amount
         );
 
-        UUID id = this.purchaseService.insert(insertDto);
+        PurchaseInsertedDto insertedDto = this.purchaseService.insert(insertDto);
 
-        Optional<Purchase> purchaseOptional = this.purchaseService.findById(id);
+        Optional<Purchase> purchaseOptional = this.purchaseService.findById(insertedDto.id());
 
         Assertions.assertTrue(purchaseOptional.isPresent());
 
