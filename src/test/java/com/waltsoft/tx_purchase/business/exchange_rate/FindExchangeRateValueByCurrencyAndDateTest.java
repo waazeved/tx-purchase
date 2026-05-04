@@ -21,6 +21,7 @@ import java.util.Optional;
 class FindExchangeRateValueByCurrencyAndDateTest {
 
     private static final String CURRENCY = "Brazil-Real";
+    private static final LocalDate DATE = LocalDate.now();
 
     private ExchangeRateServiceImpl exchangeRateService;
 
@@ -38,9 +39,8 @@ class FindExchangeRateValueByCurrencyAndDateTest {
     @Test
     @DisplayName("Should find exchange rates and return the most recent exchange rate when there are multiple results")
     void shouldReturnMostRecentExchangeRate() throws NoExchangeRateDataRuntimeException {
-
         LocalDate targetDate = LocalDate.of(2026, 5, 10);
-        LocalDate startDate = targetDate.minusMonths(ExchangeRateServiceImpl.MAX_EXCHANGE_RATES_PERIOD);
+        LocalDate startDate = targetDate.minusMonths(ExchangeRateServiceImpl.MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS);
 
         LocalDate date1 = targetDate.minusMonths(1);
         LocalDate date2 = date1.minusDays(1);
@@ -74,18 +74,17 @@ class FindExchangeRateValueByCurrencyAndDateTest {
     @Test
     @DisplayName("Should return empty Optional when there is no exchange rate for date")
     void shouldThrowExceptionWhenNoRatesFound() {
-        LocalDate targetDate = LocalDate.now();
 
         Mockito.doReturn(Collections.emptyList())
                 .when(exchangeRateService)
                 .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
                         ArgumentMatchers.eq(CURRENCY),
                         ArgumentMatchers.any(),
-                        ArgumentMatchers.eq(targetDate)
+                        ArgumentMatchers.eq(DATE)
                 );
 
         Optional<BigDecimal> exchangeRateValueOptional = exchangeRateService
-                .findExchangeRateValueByCurrencyAndDate(CURRENCY, targetDate);
+                .findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE);
 
         Assertions.assertTrue(exchangeRateValueOptional.isEmpty());
     }

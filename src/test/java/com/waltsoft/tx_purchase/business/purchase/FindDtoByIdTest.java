@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 
 @Transactional
@@ -33,21 +34,27 @@ class FindDtoByIdTest extends ContainerTest {
     @Test
     @DisplayName("Should find purchaseDto by ID")
     void shouldFindPurchaseDtoById() {
-        Purchase purchase = makePurchase();
+        BigDecimal expectedAmount = new BigDecimal("100");
+
+        Purchase purchase = makePurchase(expectedAmount);
         UUID id = purchase.getId();
 
-        BigDecimal convertedAmount = new BigDecimal("5.40");
+        BigDecimal expectedExchangeRateValue = new BigDecimal("2.05");
+        Optional<BigDecimal> exchangeRateValueOptional = Optional.of(expectedExchangeRateValue);
 
-        Mockito.when(exchangeRateService.convertAmountByCurrencyAndDate(AMOUNT, CURRENCY, DATE))
-                .thenReturn(convertedAmount);
+        BigDecimal expectedConvertedAmount = new BigDecimal("205.00");
+
+        Mockito.when(exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE))
+                .thenReturn(exchangeRateValueOptional);
 
         PurchaseDto purchaseDto = this.purchaseService.findDtoByIdAndCurrency(id, CURRENCY);
 
         Assertions.assertNotNull(purchaseDto);
         Assertions.assertEquals(DESCRIPTION, purchaseDto.description());
         Assertions.assertEquals(DATE, purchaseDto.date());
-        Assertions.assertEquals(AMOUNT, purchaseDto.amount());
-        Assertions.assertEquals(convertedAmount, purchaseDto.convertedAmount());
+        Assertions.assertEquals(expectedAmount, purchaseDto.amount());
+        Assertions.assertEquals(expectedExchangeRateValue, purchaseDto.exchangeRateValue());
+        Assertions.assertEquals(expectedConvertedAmount, purchaseDto.convertedAmount());
     }
 
     @Test
@@ -73,18 +80,24 @@ class FindDtoByIdTest extends ContainerTest {
         Purchase purchase = makePurchase();
         UUID id = purchase.getId();
 
-        Mockito.when(exchangeRateService.convertAmountByCurrencyAndDate(AMOUNT, CURRENCY, DATE))
-                .thenThrow(new NoExchangeRateDataRuntimeException("No data"));
+        Optional<BigDecimal> exchangeRateValueOptional = Optional.empty();
+
+        Mockito.when(exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE))
+                .thenReturn(exchangeRateValueOptional);
 
         Assertions.assertThrows(NoExchangeRateDataRuntimeException.class,
                 () -> this.purchaseService.findDtoByIdAndCurrency(id, CURRENCY));
     }
 
     private Purchase makePurchase() {
+        return makePurchase(AMOUNT);
+    }
+
+    private Purchase makePurchase(BigDecimal amount) {
 
         Purchase purchase = new Purchase(
                 DESCRIPTION,
-                AMOUNT,
+                amount,
                 DATE
         );
 
