@@ -8,6 +8,7 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -53,7 +54,8 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
     }
 
     @Override
-    @CircuitBreaker(name = ExchangeRateResilienceConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER, fallbackMethod = "fallback")
+    @Cacheable(value = ExchangeRateCacheConfig.EXCHANGE_RATE_CACHE_NAME, key = "{#currency, #date}")
+    @CircuitBreaker(name = ExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME, fallbackMethod = "fallback")
     public Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
         LocalDate startDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS);
 

@@ -9,9 +9,9 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Duration;
 
 @Configuration
-class ExchangeRateResilienceConfig {
+class ExchangeRateCircuitBreakConfig {
 
-    public static final String FIND_EXCHANGE_RATE_CIRCUIT_BREAKER = "findExchangeRateCircuitBreaker";
+    public static final String FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME = "findExchangeRateCircuitBreaker";
     public static final int FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_MIN_NUMBER_OF_CALLS = 10;
     public static final int FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD = 50;
     public static final int FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE = 5;
@@ -28,8 +28,8 @@ class ExchangeRateResilienceConfig {
                 .minimumNumberOfCalls(FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_MIN_NUMBER_OF_CALLS)
                 .build();
 
-        registry.circuitBreaker(FIND_EXCHANGE_RATE_CIRCUIT_BREAKER, config);
+        registry.circuitBreaker(FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME, config);
 
-        return FIND_EXCHANGE_RATE_CIRCUIT_BREAKER;
+        return FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME;
     }
 }
