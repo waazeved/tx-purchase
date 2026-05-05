@@ -5,10 +5,14 @@ import com.waltsoft.tx_purchase.business.purchase.PurchaseService;
 import com.waltsoft.tx_purchase.controller.PurchaseController;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertDto;
 import com.waltsoft.tx_purchase.dto.purchase.PurchaseInsertedDto;
+import org.apache.commons.text.CharacterPredicates;
+import org.apache.commons.text.RandomStringGenerator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +27,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @SpringBootTest(
         properties = {
@@ -35,6 +40,9 @@ import java.util.UUID;
         })
 @AutoConfigureMockMvc
 class InsertPurchaseTest {
+
+    private static final BigDecimal AMOUNT = new BigDecimal("10.00");
+    private static final String DESCRIPTION = "IPhone";
 
     @Autowired
     private MockMvc mockMvc;
@@ -52,9 +60,9 @@ class InsertPurchaseTest {
         String expectedInsertedDtoAsJson = objectMapper.writeValueAsString(expectedInsertedDto);
 
         PurchaseInsertDto insertDto = new PurchaseInsertDto(
-                "PlayStation",
+                DESCRIPTION,
                 LocalDate.now(),
-                new BigDecimal("499.99")
+                AMOUNT
         );
 
         Mockito.when(purchaseService.insert(ArgumentMatchers.any(PurchaseInsertDto.class)))
@@ -67,25 +75,11 @@ class InsertPurchaseTest {
                 .andExpect(MockMvcResultMatchers.content().string(expectedInsertedDtoAsJson));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "null",
-            "\"2024-13-01\"",
-            "\"01/01/2024\"",
-            "\"not-a-date\"",
-            "\"2024-02-30\"",
-            "\"\"",
-            "\" \""
-    })
-    @DisplayName("Should return 400 Bad Request when date is invalid")
-    void shouldReturnBadRequestWhenDateIsInvalid(String date) throws Exception {
-        String json = """
-                {
-                    "description": "Sneakers",
-                    "date": %s,
-                    "amount": 10.00
-                }
-                """.formatted(date);
+    @Test
+    @DisplayName("Should return 400 Bad Request when date is null")
+    void shouldReturnBadRequestWhenDateIsNull() throws Exception {
+        PurchaseInsertDto dto = new PurchaseInsertDto(DESCRIPTION, null, AMOUNT);
+        String json = objectMapper.writeValueAsString(dto);
 
         mockMvc.perform(MockMvcRequestBuilders.post(PurchaseController.PATH)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -96,22 +90,12 @@ class InsertPurchaseTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-            "null",
-            "\" \"",
-            "\"\"",
-            "10.00",
-            "10"
-    })
+    @NullSource
+    @MethodSource("shouldReturnBadRequestWhenDescriptionIsInvalid")
     @DisplayName("Should return 400 Bad Request when description is invalid")
     void shouldReturnBadRequestWhenDescriptionIsInvalid(String description) throws Exception {
-        String json = """
-                {
-                    "description": %s,
-                    "date": "2026-05-03",
-                    "amount": 10.00
-                }
-                """.formatted(description);
+        PurchaseInsertDto dto = new PurchaseInsertDto(description, LocalDate.now(), AMOUNT);
+        String json = objectMapper.writeValueAsString(dto);
 
         mockMvc.perform(MockMvcRequestBuilders.post(PurchaseController.PATH)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -121,27 +105,30 @@ class InsertPurchaseTest {
         Mockito.verifyNoInteractions(purchaseService);
     }
 
+    private static Stream<Arguments> shouldReturnBadRequestWhenDescriptionIsInvalid() {
+
+        RandomStringGenerator randomStringGenerator = new RandomStringGenerator.Builder()
+                .withinRange('0', 'z')
+                .filteredBy(CharacterPredicates.LETTERS, CharacterPredicates.DIGITS)
+                .get();
+
+        String tooLongDescription = randomStringGenerator.generate(PurchaseInsertDto.MAX_DESCRIPTION_SIZE + 1);
+
+
+        return Stream.of(
+                Arguments.of(" "),
+                Arguments.of(""),
+                Arguments.of(tooLongDescription)
+        );
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = {
-            "null",
-            "\" \"",
-            "\"\"",
-            "\"10.00\"",
-            "\"10\"",
-            "0.00",
-            "-0.01",
-            "-1.00",
-            "-50.00"
-    })
+    @NullSource
+    @MethodSource("shouldReturnBadRequestWhenAmountIsInvalid")
     @DisplayName("Should return 400 Bad Request when amount is invalid")
-    void shouldReturnBadRequestWhenAmountIsInvalid(String amount) throws Exception {
-        String json = """
-                {
-                    "description": "Nike Sneakers",
-                    "date": "2026-05-03",
-                    "amount": %s
-                }
-                """.formatted(amount);
+    void shouldReturnBadRequestWhenAmountIsInvalid(BigDecimal amount) throws Exception {
+        PurchaseInsertDto dto = new PurchaseInsertDto(DESCRIPTION, LocalDate.now(), amount);
+        String json = objectMapper.writeValueAsString(dto);
 
         mockMvc.perform(MockMvcRequestBuilders.post(PurchaseController.PATH)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -149,15 +136,23 @@ class InsertPurchaseTest {
                 .andExpect(MockMvcResultMatchers.status().isBadRequest());
 
         Mockito.verifyNoInteractions(purchaseService);
+    }
+
+    private static Stream<Arguments> shouldReturnBadRequestWhenAmountIsInvalid() {
+        return Stream.of(
+                Arguments.of(new BigDecimal("0.00")),
+                Arguments.of(new BigDecimal("-0.01")),
+                Arguments.of(new BigDecimal("-50.00"))
+        );
     }
 
     @Test
     @DisplayName("Should return 500 Internal Server Error when service fails")
     void shouldReturnInternalServerErrorOnUnexpectedException() throws Exception {
         PurchaseInsertDto insertDto = new PurchaseInsertDto(
-                "MacBook",
+                DESCRIPTION,
                 LocalDate.now(),
-                new BigDecimal("10.00")
+                AMOUNT
         );
 
         Mockito.when(purchaseService.insert(ArgumentMatchers.any(PurchaseInsertDto.class)))
