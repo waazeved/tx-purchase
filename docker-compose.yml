@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: tx_purchase_db
+    command: -p 5732
+    environment:
+      POSTGRES_DB: tx_purchase_db
+      POSTGRES_USER: user_admin
+      POSTGRES_PASSWORD: password_123
+    ports:
+      - "5732:5732"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -p 5732 -U user_admin -d tx_purchase_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
+    container_name: tx_purchase_app
+    ports:
+      - "8080:8080"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      - DB_URL=jdbc:postgresql://db:5732/tx_purchase_db
+      - DB_USERNAME=user_admin
+      - DB_PASSWORD=password_123
+    depends_on:
+      db:
+        condition: service_healthy
