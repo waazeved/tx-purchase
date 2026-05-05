@@ -33,7 +33,7 @@ public class PurchaseController {
     @Operation(summary = "Insert new purchase", description = "Creates a new purchase record and returns the generated UUID.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Purchase created successfully",
-                    content = @Content(schema = @Schema(implementation = UUID.class))),
+                    content = @Content(schema = @Schema(implementation = PurchaseInsertedDto.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - Validation error in the sent data (e.g., null values or amounts below 0.01)", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Unexpected server error", content = @Content)
     })
@@ -47,12 +47,21 @@ public class PurchaseController {
     }
 
     @GetMapping("/{id}/currency/{currency}")
-    @Operation(summary = "Find purchase with currency conversion", description = "Returns purchase data and the converted amount for the specified currency.")
+    @Operation(
+            summary = "Find purchase with currency conversion",
+            description = """
+                    Returns purchase data and the converted amount for the specified currency.
+                    
+                    **Important:** The `currency` parameter must match a value from the **'Country - Currency Description'** column of the official Treasury dataset.
+                    
+                    Consult the available values here: [Treasury Reporting Rates of Exchange](https://fiscaldata.treasury.gov/datasets/treasury-reporting-rates-exchange/treasury-reporting-rates-of-exchange)
+                    """
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Purchase found and conversion performed successfully",
                     content = @Content(schema = @Schema(implementation = PurchaseDto.class))),
             @ApiResponse(responseCode = "400", description = "Bad Request - Purchase ID does not exist or invalid parameters", content = @Content),
-            @ApiResponse(responseCode = "422", description = "Unprocessable Entity - No exchange rate data available for the date", content = @Content),
+            @ApiResponse(responseCode = "422", description = "Unprocessable Entity - No exchange rate data available for the currency and purchase date", content = @Content),
             @ApiResponse(responseCode = "503", description = "Service Unavailable - Exchange rate service is unavailable", content = @Content),
             @ApiResponse(responseCode = "500", description = "Internal Server Error - Unexpected server error", content = @Content)
     })

@@ -28,8 +28,8 @@ services:
       - 1.1.1.1
     environment:
       - DB_URL=jdbc:postgresql://db:5732/tx_purchase_db
-      - SPRING_DATASOURCE_USERNAME=user_admin
-      - SPRING_DATASOURCE_PASSWORD=password_123
+      - DB_USERNAME=user_admin
+      - DB_PASSWORD=password_123
     depends_on:
       db:
         condition: service_healthy
