@@ -11,10 +11,10 @@ date.
 
 To run or develop this project, ensure you have the following installed:
 
-* OpenJDK 21
+* OpenJDK 21+
 * Docker: For containerized execution.
-* Docker Compose v5+: To orchestrate the application and database services.
-* PostgreSQL 18: The relational database used for persistence.
+* Docker Compose: To orchestrate the application and database services.
+* PostgreSQL 18+: The relational database used for persistence.
 
 ---
 
