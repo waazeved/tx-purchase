@@ -47,7 +47,16 @@ public class PurchaseController {
     }
 
     @GetMapping("/{id}/currency/{currency}")
-    @Operation(summary = "Find purchase with currency conversion", description = "Returns purchase data and the converted amount for the specified currency.")
+    @Operation(
+            summary = "Find purchase with currency conversion",
+            description = """
+                    Returns purchase data and the converted amount for the specified currency.
+                    
+                    **Important:** The `currency` parameter must match a value from the **'Country - Currency Description'** column of the official Treasury dataset.
+                    
+                    Consult the available values here: [Treasury Reporting Rates of Exchange](https://fiscaldata.treasury.gov/datasets/treasury-reporting-rates-exchange/treasury-reporting-rates-of-exchange)
+                    """
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Purchase found and conversion performed successfully",
                     content = @Content(schema = @Schema(implementation = PurchaseDto.class))),
