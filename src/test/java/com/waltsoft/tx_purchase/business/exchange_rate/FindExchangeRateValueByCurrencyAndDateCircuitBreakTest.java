@@ -46,8 +46,8 @@ class FindExchangeRateValueByCurrencyAndDateCircuitBreakTest extends ContainerTe
         int totalCallsNumberBeforeCircuitBreak = slidingWindowSize < minNumberOfCalls
                 ? slidingWindowSize + minNumberOfCalls:slidingWindowSize;
 
-        int errorsCallsNumber = (int) Math.round(slidingWindowSize * (failureRateThreshold * 0.01));
-        int successCallsNumber = totalCallsNumberBeforeCircuitBreak - errorsCallsNumber;
+        int errorCallsNumber = (int) Math.round(slidingWindowSize * (failureRateThreshold / 100.0));
+        int successCallsNumber = totalCallsNumberBeforeCircuitBreak - errorCallsNumber;
 
         for (int i = 0; i < successCallsNumber; i++) {
 
@@ -58,7 +58,7 @@ class FindExchangeRateValueByCurrencyAndDateCircuitBreakTest extends ContainerTe
             this.exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE);
         }
 
-        for (int i = 0; i < errorsCallsNumber; i++) {
+        for (int i = 0; i < errorCallsNumber; i++) {
 
             Mockito.doThrow(new UnavailableExchangeRateApiRuntimeException("API Fail")).when(exchangeRateService)
                     .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate
