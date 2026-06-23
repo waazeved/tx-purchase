@@ -1,4 +1,4 @@
-package com.waltsoft.tx_purchase.business.exchange_rate;
+package com.waltsoft.tx_purchase.business.exchange_rate.api.usa_treasury;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
@@ -26,19 +26,19 @@ class FindExchangeRateValueByCurrencyAndDateCircuitBreakTest extends ContainerTe
 
 
     @MockitoSpyBean
-    private ExchangeRateServiceImpl exchangeRateService;
+    private UsaTreasuryExchangeRateApi exchangeRateApi;
 
     @Autowired
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
     @Autowired
-    @Qualifier("registerExchangeRateCacheManager")
+    @Qualifier("registerUsaTreasuryExchangeRateCacheManager")
     private CacheManager cacheManager;
 
     @BeforeEach
     void setUp() {
         circuitBreakerRegistry
-                .circuitBreaker(ExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME)
+                .circuitBreaker(UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME)
                 .reset();
 
         clearExchangeRateCache();
@@ -50,9 +50,9 @@ class FindExchangeRateValueByCurrencyAndDateCircuitBreakTest extends ContainerTe
     void shouldOpenCircuitWhenApiFailureLimitExceeds() {
         List<ExchangeRate> exchangeRates = List.of();
 
-        int minNumberOfCalls = ExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_MIN_NUMBER_OF_CALLS;
-        int failureRateThreshold = ExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD;
-        int slidingWindowSize = ExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE;
+        int minNumberOfCalls = UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_MIN_NUMBER_OF_CALLS;
+        int failureRateThreshold = UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD;
+        int slidingWindowSize = UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE;
 
         int totalCallsNumberBeforeCircuitBreak = slidingWindowSize < minNumberOfCalls
                 ? slidingWindowSize + minNumberOfCalls:slidingWindowSize;
@@ -60,38 +60,37 @@ class FindExchangeRateValueByCurrencyAndDateCircuitBreakTest extends ContainerTe
         int errorCallsNumber = (int) Math.round(slidingWindowSize * (failureRateThreshold / 100.0));
         int successCallsNumber = totalCallsNumberBeforeCircuitBreak - errorCallsNumber;
 
+        Mockito.doReturn(exchangeRates).when(exchangeRateApi)
+                .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate
+                        (Mockito.eq(CURRENCY), Mockito.any(), Mockito.eq(DATE));
+
         for (int i = 0; i < successCallsNumber; i++) {
             clearExchangeRateCache();
-
-            Mockito.doReturn(exchangeRates).when(exchangeRateService)
-                    .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate
-                            (Mockito.eq(CURRENCY), Mockito.any(), Mockito.eq(DATE));
-
-            this.exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE);
+            this.exchangeRateApi.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE);
         }
+
+        Mockito.doThrow(new UnavailableExchangeRateApiRuntimeException("API Fail")).when(exchangeRateApi)
+                .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate
+                        (Mockito.eq(CURRENCY), Mockito.any(), Mockito.eq(DATE));
 
         for (int i = 0; i < errorCallsNumber; i++) {
             clearExchangeRateCache();
 
-            Mockito.doThrow(new UnavailableExchangeRateApiRuntimeException("API Fail")).when(exchangeRateService)
-                    .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate
-                            (Mockito.eq(CURRENCY), Mockito.any(), Mockito.eq(DATE));
-
             Assertions.assertThrows(UnavailableExchangeRateApiRuntimeException.class, () ->
-                    this.exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE));
+                    this.exchangeRateApi.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE));
         }
 
         clearExchangeRateCache();
 
         Assertions.assertThrows(UnavailableExchangeRateApiRuntimeException.class, () ->
-                this.exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE));
+                this.exchangeRateApi.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE));
 
-        Mockito.verify(exchangeRateService, Mockito.times(totalCallsNumberBeforeCircuitBreak))
+        Mockito.verify(exchangeRateApi, Mockito.times(totalCallsNumberBeforeCircuitBreak))
                 .findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE);
     }
 
     private void clearExchangeRateCache() {
-        Optional.ofNullable(cacheManager.getCache(ExchangeRateCacheConfig.EXCHANGE_RATE_CACHE_NAME))
+        Optional.ofNullable(cacheManager.getCache(UsaTreasuryExchangeRateCacheConfig.EXCHANGE_RATE_CACHE_NAME))
                 .ifPresent(Cache::clear);
     }
 }

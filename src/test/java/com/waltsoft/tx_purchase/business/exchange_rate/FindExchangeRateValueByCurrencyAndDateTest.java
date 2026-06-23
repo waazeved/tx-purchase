@@ -1,8 +1,8 @@
 package com.waltsoft.tx_purchase.business.exchange_rate;
 
+import com.waltsoft.tx_purchase.business.exchange_rate.api.usa_treasury.UsaTreasuryExchangeRateDto;
 import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.NoExchangeRateDataRuntimeException;
-import com.waltsoft.tx_purchase.dto.exchange_rate.UsaTreasuryExchangeRateDto;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

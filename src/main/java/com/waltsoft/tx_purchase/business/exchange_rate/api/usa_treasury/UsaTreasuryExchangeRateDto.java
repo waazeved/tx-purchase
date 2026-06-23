@@ -1,4 +1,4 @@
-package com.waltsoft.tx_purchase.dto.exchange_rate;
+package com.waltsoft.tx_purchase.business.exchange_rate.api.usa_treasury;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -6,7 +6,7 @@ import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
 
 import java.time.LocalDate;
 
-public record UsaTreasuryExchangeRateDto(
+record UsaTreasuryExchangeRateDto(
         @JsonProperty("record_date")
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
         LocalDate date,
