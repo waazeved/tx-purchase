@@ -17,7 +17,7 @@ class UsaTreasuryExchangeRateCircuitBreakConfig {
     public static final int FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_SLIDING_WINDOW_SIZE = 5;
 
     @Bean
-    public String registerFindExchangeRateCircuitBreaker(CircuitBreakerRegistry registry) {
+    public String registerUsaTreasuryFindExchangeRateCircuitBreaker(CircuitBreakerRegistry registry) {
 
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
                 .recordExceptions(UnavailableExchangeRateApiRuntimeException.class)

@@ -17,58 +17,103 @@ import reactor.util.retry.Retry;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 class FrankfurterExchangeRateApi implements ExchangeRateApi {
 
+    public static final int MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS = 6; // Similar to UsaTreasury
     private static final String API_BASE_URL = "https://api.frankfurter.app";
-    private static final String API_PATH_TEMPLATE = "/%s?from=%s&to=%s"; // /YYYY-MM-DD?from=BASE&to=TARGET
-    private static final String BASE_CURRENCY = "USD"; // Assuming USD as base for simplicity, similar to USA Treasury API context
+    private static final String API_PATH_TEMPLATE = "/%s..%s?from=%s&to=%s"; // /YYYY-MM-DD..YYYY-MM-DD?from=BASE&to=TARGET
+    private static final String BASE_CURRENCY = "USD";
     private static final Log LOG = LogFactory.getLog(FrankfurterExchangeRateApi.class);
 
     private final WebClient webClient;
     private final Duration apiRequestTimeout;
     private final int apiRequestMaxAttempts;
     private final Duration apiRequestBackoffDuration;
-    private final FrankfurterCurrencyCodeMapper currencyCodeMapper;
+    private final FrankfurterCurrencyCodeConverter currencyCodeConverter;
 
     @Autowired
-    public FrankfurterExchangeRateApi(WebClient.Builder webClientBuilder, FrankfurterCurrencyCodeMapper currencyCodeMapper) {
+    public FrankfurterExchangeRateApi(WebClient.Builder webClientBuilder, FrankfurterCurrencyCodeConverter currencyCodeConverter) {
         this.webClient = webClientBuilder.baseUrl(API_BASE_URL).build();
         this.apiRequestTimeout = Duration.ofSeconds(8);
         this.apiRequestMaxAttempts = 3;
         this.apiRequestBackoffDuration = Duration.ofSeconds(2);
-        this.currencyCodeMapper = currencyCodeMapper;
+        this.currencyCodeConverter = currencyCodeConverter;
     }
 
-    // Constructor for testing purposes
-    public FrankfurterExchangeRateApi(WebClient webClient, Duration apiTimeout, int apiRequestMaxAttempts, Duration apiRequestBackoffDuration, FrankfurterCurrencyCodeMapper currencyCodeMapper) {
+    public FrankfurterExchangeRateApi(WebClient webClient, Duration apiTimeout, int apiRequestMaxAttempts, Duration apiRequestBackoffDuration, FrankfurterCurrencyCodeConverter currencyCodeConverter) {
         this.webClient = webClient;
         this.apiRequestTimeout = apiTimeout;
         this.apiRequestMaxAttempts = apiRequestMaxAttempts;
         this.apiRequestBackoffDuration = apiRequestBackoffDuration;
-        this.currencyCodeMapper = currencyCodeMapper;
+        this.currencyCodeConverter = currencyCodeConverter;
     }
 
     @Override
-    @Cacheable(value = FrankfurterExchangeRateCacheConfig.EXCHANGE_RATE_CACHE_NAME, key = "{#currency, #date}")
-    @CircuitBreaker(name = FrankfurterExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME, fallbackMethod = "findByCurrencyAndDateFallback")
-    public Optional<BigDecimal> findByCurrencyAndDate(String currency, LocalDate date) {
-        String targetCurrencyCode = currencyCodeMapper.parseCurrencyToFrankfurterFormat(currency);
+    public Integer getPriority() {
+        return 2;
+    }
 
-        if (targetCurrencyCode==null) {
-            LOG.warn(String.format("Could not parse currency '%s' to Frankfurter format.", currency));
+    @Override
+    @Cacheable(
+            value = FrankfurterExchangeRateCacheConfig.EXCHANGE_RATE_CACHE_NAME,
+            key = "{#currency, #date}",
+            cacheManager = "registerFrankfurterExchangeRateCacheManager"
+    )
+    @CircuitBreaker(
+            name = FrankfurterExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME,
+            fallbackMethod = "findByCurrencyAndDateFallback"
+    )
+    public Optional<BigDecimal> findByCurrencyAndDate(String currency, LocalDate date) {
+        Optional<String> convertedCurrencyCodeOptional = currencyCodeConverter.convert(currency);
+
+        if (convertedCurrencyCodeOptional.isEmpty()) {
+            LOG.warn(String.format("Could not convert currency '%s' to Frankfurter format.", currency));
             return Optional.empty();
         }
 
-        if (BASE_CURRENCY.equals(targetCurrencyCode)) {
-            return Optional.of(BigDecimal.ONE); // Exchange rate of USD to USD is 1
+        String convertedCurrencyCode = convertedCurrencyCodeOptional.get();
+
+        LocalDate startDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS);
+
+        List<FrankfurterExchangeRateDto> exchangeRates = findByCurrencyAndStartDateAndEndDate(convertedCurrencyCode, startDate, date);
+
+        if (exchangeRates.isEmpty()) {
+            return Optional.empty();
         }
 
-        String path = String.format(API_PATH_TEMPLATE, date.toString(), BASE_CURRENCY, targetCurrencyCode);
+        FrankfurterExchangeRateDto exchangeRate = exchangeRates.stream()
+                .max(Comparator.comparing(FrankfurterExchangeRateDto::date))
+                .orElseThrow();
 
-        FrankfurterExchangeRateApiResponseDto response = this.webClient.get()
+        return Optional.of(exchangeRate.value());
+    }
+
+    @SuppressWarnings({"java:S1172", "java:S112"})
+    public Optional<BigDecimal> findByCurrencyAndDateFallback(
+            String currency, LocalDate date, Exception exception) throws Exception {
+
+        if (exception instanceof CallNotPermittedException) {
+            throw makeUnavailableExchangeRateApiRuntimeException();
+        }
+
+        LOG.error(String.format("Error on FrankfurterExchangeRateApi.findByCurrencyAndDate. Currency: %s, Date: %s. Error: %s",
+                currency, date, exception.getMessage()));
+
+        throw exception;
+    }
+
+    List<FrankfurterExchangeRateDto> findByCurrencyAndStartDateAndEndDate(String targetCurrencyCode, LocalDate startDate, LocalDate endDate) {
+        String path = String.format(API_PATH_TEMPLATE, startDate.toString(), endDate.toString(), BASE_CURRENCY, targetCurrencyCode);
+
+        FrankfurterExchangeRateApiResponseDto apiResponse = this.webClient.get()
                 .uri(path)
                 .retrieve()
                 .onStatus(
@@ -88,30 +133,24 @@ class FrankfurterExchangeRateApi implements ExchangeRateApi {
                     );
                 }).block();
 
-        return Optional.ofNullable(response)
-                .map(r -> r.rates().get(targetCurrencyCode));
-    }
-
-    @SuppressWarnings({"java:S1172", "java:S112"})
-    public Optional<BigDecimal> findByCurrencyAndDateFallback(
-            String currency, LocalDate date, Exception exception) throws Exception {
-
-        if (exception instanceof CallNotPermittedException) {
-            throw makeUnavailableExchangeRateApiRuntimeException();
+        if (apiResponse==null || apiResponse.rates()==null || apiResponse.rates().isEmpty()) {
+            return List.of();
         }
 
-        LOG.error(String.format("Error on FrankfurterExchangeRateApi.findByCurrencyAndDate. Currency: %s, Date: %s. Error: %s",
-                currency, date, exception.getMessage()));
-
-        throw exception;
+        return apiResponse.rates().entrySet().stream()
+                .flatMap(dateEntry -> {
+                    LocalDate rateDate = dateEntry.getKey();
+                    Map<String, BigDecimal> ratesForDate = dateEntry.getValue();
+                    BigDecimal rateValue = ratesForDate.get(targetCurrencyCode);
+                    if (rateValue!=null) {
+                        return Stream.of(new FrankfurterExchangeRateDto(rateDate, rateValue));
+                    }
+                    return Stream.empty();
+                })
+                .collect(Collectors.toList());
     }
 
     private UnavailableExchangeRateApiRuntimeException makeUnavailableExchangeRateApiRuntimeException() {
         return new UnavailableExchangeRateApiRuntimeException("Exchange rate service (Frankfurter) is currently unavailable. Please try again later.");
-    }
-
-    @Override
-    public Integer getPriority() {
-        return 2;
     }
 }

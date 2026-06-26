@@ -54,8 +54,15 @@ class UsaTreasuryExchangeRateApi implements ExchangeRateApi {
     }
 
     @Override
-    @Cacheable(value = UsaTreasuryExchangeRateCacheConfig.EXCHANGE_RATE_CACHE_NAME, key = "{#currency, #date}")
-    @CircuitBreaker(name = UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME, fallbackMethod = "findByCurrencyAndDateFallback")
+    @Cacheable(
+            value = UsaTreasuryExchangeRateCacheConfig.EXCHANGE_RATE_CACHE_NAME,
+            key = "{#currency, #date}",
+            cacheManager = "registerUsaTreasuryExchangeRateCacheManager"
+    )
+    @CircuitBreaker(
+            name = UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME,
+            fallbackMethod = "findByCurrencyAndDateFallback"
+    )
     public Optional<BigDecimal> findByCurrencyAndDate(String currency, LocalDate date) {
         LocalDate startDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS);
 
