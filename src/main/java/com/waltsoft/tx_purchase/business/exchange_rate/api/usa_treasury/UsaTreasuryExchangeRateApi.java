@@ -2,6 +2,7 @@ package com.waltsoft.tx_purchase.business.exchange_rate.api.usa_treasury;
 
 import com.waltsoft.tx_purchase.business.exchange_rate.api.ExchangeRateApi;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,11 +56,11 @@ class UsaTreasuryExchangeRateApi implements ExchangeRateApi {
     @Override
     @Cacheable(value = UsaTreasuryExchangeRateCacheConfig.EXCHANGE_RATE_CACHE_NAME, key = "{#currency, #date}")
     @CircuitBreaker(name = UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME, fallbackMethod = "fallback")
-    public Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
+    public Optional<BigDecimal> findByCurrencyAndDate(String currency, LocalDate date) {
         LocalDate startDate = date.minusMonths(MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS);
 
         List<UsaTreasuryExchangeRateDto> exchangeRates =
-                findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(currency, startDate, date);
+                findByCurrencyAndStartDateAndEndDate(currency, startDate, date);
 
         if (exchangeRates.isEmpty()) {
             return Optional.empty();
@@ -74,8 +75,22 @@ class UsaTreasuryExchangeRateApi implements ExchangeRateApi {
         return Optional.of(exchangeRateValue);
     }
 
+    @SuppressWarnings({"java:S1172", "java:S112"})
+    public Optional<BigDecimal> fallback(
+            String currency, LocalDate date, Exception exception) throws Exception {
 
-    List<UsaTreasuryExchangeRateDto> findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(String currency, LocalDate startDate, LocalDate endDate) {
+        if (exception instanceof CallNotPermittedException) {
+            throw makeUnavailableExchangeRateApiRuntimeException();
+        }
+
+        LOG.error(String.format("Error on ExchangeRateService.convertAmountByCurrencyAndDate. Currency: %s, Date: %s. Error: %s",
+                currency, date, exception.getMessage()));
+
+        throw exception;
+    }
+
+
+    List<UsaTreasuryExchangeRateDto> findByCurrencyAndStartDateAndEndDate(String currency, LocalDate startDate, LocalDate endDate) {
         return this.webClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .path(API_PATH)

@@ -1,6 +1,5 @@
 package com.waltsoft.tx_purchase.business.exchange_rate.api.usa_treasury;
 
-import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -12,8 +11,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 
-@DisplayName("UsaTreasuryExchangeRateApi.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate Tests")
-class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
+@DisplayName("UsaTreasuryExchangeRateApi.findByCurrencyAndStartDateAndEndDate Tests")
+class FindCurrencyAndStartDateAndEndDateTest {
 
     public static final String CURRENCY = "Brazil-Real";
     public static final LocalDate START_DATE = LocalDate.of(2025, 12, 30);
@@ -62,15 +61,15 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
                 .setBody(jsonResponse)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> exchangeRates = exchangeRateApi.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
+        List<UsaTreasuryExchangeRateDto> exchangeRates = exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
                 CURRENCY,
                 START_DATE, END_DATE);
 
         Assertions.assertNotNull(exchangeRates);
         Assertions.assertEquals(2, exchangeRates.size());
 
-        ExchangeRate exchangeRate1 = exchangeRates.get(0);
-        ExchangeRate exchangeRate2 = exchangeRates.get(1);
+        UsaTreasuryExchangeRateDto exchangeRate1 = exchangeRates.get(0);
+        UsaTreasuryExchangeRateDto exchangeRate2 = exchangeRates.get(1);
 
         Assertions.assertEquals(rate1, exchangeRate1.value());
         Assertions.assertEquals(START_DATE, exchangeRate1.date());
@@ -94,7 +93,7 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
                         """)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> result = exchangeRateApi.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
+        List<UsaTreasuryExchangeRateDto> result = exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
                 CURRENCY, START_DATE, END_DATE);
 
         Assertions.assertEquals(1, result.size());
@@ -110,7 +109,7 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
                         """)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> result = exchangeRateApi.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
+        List<UsaTreasuryExchangeRateDto> result = exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
                 CURRENCY, START_DATE, END_DATE);
 
         Assertions.assertNotNull(result);
@@ -126,7 +125,7 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
         Assertions.assertThrows(UnavailableExchangeRateApiRuntimeException.class,
-                () -> exchangeRateApi.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
+                () -> exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
                         CURRENCY, START_DATE, END_DATE));
 
         Assertions.assertEquals(4, mockWebServer.getRequestCount());

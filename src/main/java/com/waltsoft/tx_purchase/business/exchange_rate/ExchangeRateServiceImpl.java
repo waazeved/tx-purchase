@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.stream.Collectors;
 
 @Service
 class ExchangeRateServiceImpl implements ExchangeRateService {
@@ -24,10 +23,11 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
     public ExchangeRateServiceImpl(List<ExchangeRateApi> exchangeRateApis) {
         this.exchangeRateApis = exchangeRateApis.stream()
                 .sorted(Comparator.comparingInt(ExchangeRateApi::getPriority))
-                .collect(Collectors.toList());
+                .toList();
     }
 
-    public Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date) {
+    @Override
+    public Optional<BigDecimal> findByCurrencyAndDate(String currency, LocalDate date) {
 
         ConcurrentHashMap<Integer, Optional<BigDecimal>> exchangeRateValueMap = new ConcurrentHashMap<>();
 
@@ -36,40 +36,39 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
 
             for (ExchangeRateApi api : exchangeRateApis) {
                 Future<?> future = executor.submit(() -> {
-                    Optional<BigDecimal> result;
                     try {
-                        result = api.findExchangeRateValueByCurrencyAndDate(currency, date);
+                        Optional<BigDecimal> result = api.findByCurrencyAndDate(currency, date);
+                        exchangeRateValueMap.put(api.getPriority(), result);
                     } catch (UnavailableExchangeRateApiRuntimeException e) {
-                        result = null;
+                        //Do nothing
                     }
-                    exchangeRateValueMap.put(api.getPriority(), result);
                 });
                 futures.add(future);
             }
 
-            for (Future<?> f : futures) {
-                try {
-                    f.get();
-                } catch (ExecutionException e) {
-                    Throwable cause = e.getCause();
-                    throw new ExchangeRateApiRuntimeException("An unexpected error occurred while fetching the exchange rate.", cause);
-                }
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new ExchangeRateApiRuntimeException("The thread was interrupted while fetching the exchange rate.", e);
+            waitFinishFutures(futures);
         }
 
-        boolean allApisUnavailable = exchangeRateValueMap.values().stream().allMatch(Objects::isNull);
-        if (allApisUnavailable) {
+        if (exchangeRateValueMap.isEmpty()) {
             throw new UnavailableExchangeRateApiRuntimeException("All exchange rate APIs were unavailable.");
         }
 
         return exchangeRateValueMap.entrySet().stream()
-                .filter(entry -> entry.getValue()!=null)
                 .filter(entry -> entry.getValue().isPresent())
-                .min(Map.Entry.comparingByKey())
-                .map(Map.Entry::getValue)
-                .orElse(Optional.empty());
+                .min(Map.Entry.comparingByKey()).flatMap(Map.Entry::getValue);
+    }
+
+    private void waitFinishFutures(List<Future<?>> futures) {
+        try {
+            for (Future<?> f : futures) {
+                f.get();
+            }
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            throw new ExchangeRateApiRuntimeException("An unexpected error occurred while fetching the exchange rate.", cause);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ExchangeRateApiRuntimeException("The thread was interrupted while fetching the exchange rate.", e);
+        }
     }
 }

@@ -1,6 +1,5 @@
 package com.waltsoft.tx_purchase.business.exchange_rate.api.usa_treasury;
 
-import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import com.waltsoft.tx_purchase.test_container.ContainerTest;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -19,7 +18,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-class FindExchangeRateValueByCurrencyAndDateCircuitBreakTest extends ContainerTest {
+@DisplayName("UsaTreasuryExchangeRateApi.findByCurrencyAndDate circuit break tests")
+class FindByCurrencyAndDateCircuitBreakTest extends ContainerTest {
 
     private static final String CURRENCY = "Brazil-Real";
     private static final LocalDate DATE = LocalDate.now();
@@ -48,7 +48,7 @@ class FindExchangeRateValueByCurrencyAndDateCircuitBreakTest extends ContainerTe
     @Test
     @DisplayName("Should circuit break when exchange rate API failure exceeds limits defined in ExchangeRateResilienceConfig")
     void shouldOpenCircuitWhenApiFailureLimitExceeds() {
-        List<ExchangeRate> exchangeRates = List.of();
+        List<UsaTreasuryExchangeRateDto> exchangeRates = List.of();
 
         int minNumberOfCalls = UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_MIN_NUMBER_OF_CALLS;
         int failureRateThreshold = UsaTreasuryExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_FAILURE_RATE_THRESHOLD;
@@ -61,32 +61,32 @@ class FindExchangeRateValueByCurrencyAndDateCircuitBreakTest extends ContainerTe
         int successCallsNumber = totalCallsNumberBeforeCircuitBreak - errorCallsNumber;
 
         Mockito.doReturn(exchangeRates).when(exchangeRateApi)
-                .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate
+                .findByCurrencyAndStartDateAndEndDate
                         (Mockito.eq(CURRENCY), Mockito.any(), Mockito.eq(DATE));
 
         for (int i = 0; i < successCallsNumber; i++) {
             clearExchangeRateCache();
-            this.exchangeRateApi.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE);
+            this.exchangeRateApi.findByCurrencyAndDate(CURRENCY, DATE);
         }
 
         Mockito.doThrow(new UnavailableExchangeRateApiRuntimeException("API Fail")).when(exchangeRateApi)
-                .findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate
+                .findByCurrencyAndStartDateAndEndDate
                         (Mockito.eq(CURRENCY), Mockito.any(), Mockito.eq(DATE));
 
         for (int i = 0; i < errorCallsNumber; i++) {
             clearExchangeRateCache();
 
             Assertions.assertThrows(UnavailableExchangeRateApiRuntimeException.class, () ->
-                    this.exchangeRateApi.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE));
+                    this.exchangeRateApi.findByCurrencyAndDate(CURRENCY, DATE));
         }
 
         clearExchangeRateCache();
 
         Assertions.assertThrows(UnavailableExchangeRateApiRuntimeException.class, () ->
-                this.exchangeRateApi.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE));
+                this.exchangeRateApi.findByCurrencyAndDate(CURRENCY, DATE));
 
         Mockito.verify(exchangeRateApi, Mockito.times(totalCallsNumberBeforeCircuitBreak))
-                .findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE);
+                .findByCurrencyAndDate(CURRENCY, DATE);
     }
 
     private void clearExchangeRateCache() {

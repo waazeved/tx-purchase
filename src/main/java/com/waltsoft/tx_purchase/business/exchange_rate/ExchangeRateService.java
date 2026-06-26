@@ -6,5 +6,5 @@ import java.util.Optional;
 
 public interface ExchangeRateService {
 
-    Optional<BigDecimal> findExchangeRateValueByCurrencyAndDate(String currency, LocalDate date);
+    Optional<BigDecimal> findByCurrencyAndDate(String currency, LocalDate date);
 }
