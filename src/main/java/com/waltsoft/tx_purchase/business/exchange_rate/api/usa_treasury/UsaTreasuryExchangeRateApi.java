@@ -9,7 +9,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -21,7 +21,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
-@Service
+@Component
 class UsaTreasuryExchangeRateApi implements ExchangeRateApi {
 
     public static final int MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS = 6;
