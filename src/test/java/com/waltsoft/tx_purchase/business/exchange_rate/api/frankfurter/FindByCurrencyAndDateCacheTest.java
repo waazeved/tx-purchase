@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.math.BigDecimal;
@@ -34,12 +35,12 @@ class FindByCurrencyAndDateCacheTest extends ContainerTest {
     @Qualifier("registerFrankfurterExchangeRateCacheManager")
     private CacheManager cacheManager;
 
-    @Autowired
+    @MockitoBean
     private FrankfurterCurrencyCodeConverter currencyCodeConverter;
 
     @BeforeEach
     void setUp() {
-        
+
         circuitBreakerRegistry
                 .circuitBreaker(FrankfurterExchangeRateCircuitBreakConfig.FIND_EXCHANGE_RATE_CIRCUIT_BREAKER_NAME)
                 .reset();

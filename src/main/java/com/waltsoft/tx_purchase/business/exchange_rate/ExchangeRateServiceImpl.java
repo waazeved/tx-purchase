@@ -29,6 +29,7 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
     @Override
     public Optional<BigDecimal> findByCurrencyAndDate(String currency, LocalDate date) {
 
+        String trimmedCurrency = currency.trim();
         ConcurrentHashMap<Integer, Optional<BigDecimal>> exchangeRateValueMap = new ConcurrentHashMap<>();
 
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -37,7 +38,7 @@ class ExchangeRateServiceImpl implements ExchangeRateService {
             for (ExchangeRateApi api : exchangeRateApis) {
                 Future<?> future = executor.submit(() -> {
                     try {
-                        Optional<BigDecimal> result = api.findByCurrencyAndDate(currency, date);
+                        Optional<BigDecimal> result = api.findByCurrencyAndDate(trimmedCurrency, date);
                         exchangeRateValueMap.put(api.getPriority(), result);
                     } catch (UnavailableExchangeRateApiRuntimeException e) {
                         //Do nothing

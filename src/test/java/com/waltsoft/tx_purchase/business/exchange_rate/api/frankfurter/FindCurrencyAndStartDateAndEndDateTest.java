@@ -136,4 +136,16 @@ class FindCurrencyAndStartDateAndEndDateTest {
 
         Assertions.assertEquals(4, mockWebServer.getRequestCount());
     }
+
+    @Test
+    @DisplayName("Should return empty list when API returns 404 Not Found")
+    void shouldReturnEmptyListWhenApiReturns404() {
+        mockWebServer.enqueue(new MockResponse().setResponseCode(404));
+
+        List<FrankfurterExchangeRateDto> result = exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
+                CURRENCY, START_DATE, END_DATE);
+
+        Assertions.assertNotNull(result);
+        Assertions.assertTrue(result.isEmpty());
+    }
 }

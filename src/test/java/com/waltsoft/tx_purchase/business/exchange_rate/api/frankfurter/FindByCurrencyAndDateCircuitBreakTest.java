@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 import java.time.LocalDate;
@@ -35,7 +36,7 @@ class FindByCurrencyAndDateCircuitBreakTest extends ContainerTest {
     @Qualifier("registerFrankfurterExchangeRateCacheManager")
     private CacheManager cacheManager;
 
-    @Autowired
+    @MockitoBean
     private FrankfurterCurrencyCodeConverter currencyCodeConverter;
 
     @BeforeEach

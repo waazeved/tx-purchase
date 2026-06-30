@@ -8,9 +8,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
@@ -21,15 +23,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
 class FrankfurterExchangeRateApi implements ExchangeRateApi {
 
-    public static final int MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS = 6; // Similar to UsaTreasury
-    private static final String API_BASE_URL = "https://api.frankfurter.app";
-    private static final String API_PATH_TEMPLATE = "/%s..%s?from=%s&to=%s"; // /YYYY-MM-DD..YYYY-MM-DD?from=BASE&to=TARGET
+    public static final int MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS = 6;
+    private static final String API_BASE_URL = "https://api.frankfurter.dev";
+    private static final String API_PATH_TEMPLATE = "/v1/%s..%s?from=%s&to=%s";
     private static final String BASE_CURRENCY = "USD";
     private static final Log LOG = LogFactory.getLog(FrankfurterExchangeRateApi.class);
 
@@ -40,7 +41,9 @@ class FrankfurterExchangeRateApi implements ExchangeRateApi {
     private final FrankfurterCurrencyCodeConverter currencyCodeConverter;
 
     @Autowired
-    public FrankfurterExchangeRateApi(WebClient.Builder webClientBuilder, FrankfurterCurrencyCodeConverter currencyCodeConverter) {
+    public FrankfurterExchangeRateApi(
+            WebClient.Builder webClientBuilder,
+            FrankfurterCurrencyCodeConverter currencyCodeConverter) {
         this.webClient = webClientBuilder.baseUrl(API_BASE_URL).build();
         this.apiRequestTimeout = Duration.ofSeconds(8);
         this.apiRequestMaxAttempts = 3;
@@ -48,7 +51,12 @@ class FrankfurterExchangeRateApi implements ExchangeRateApi {
         this.currencyCodeConverter = currencyCodeConverter;
     }
 
-    public FrankfurterExchangeRateApi(WebClient webClient, Duration apiTimeout, int apiRequestMaxAttempts, Duration apiRequestBackoffDuration, FrankfurterCurrencyCodeConverter currencyCodeConverter) {
+    public FrankfurterExchangeRateApi(
+            WebClient webClient,
+            Duration apiTimeout,
+            int apiRequestMaxAttempts,
+            Duration apiRequestBackoffDuration,
+            FrankfurterCurrencyCodeConverter currencyCodeConverter) {
         this.webClient = webClient;
         this.apiRequestTimeout = apiTimeout;
         this.apiRequestMaxAttempts = apiRequestMaxAttempts;
@@ -117,17 +125,24 @@ class FrankfurterExchangeRateApi implements ExchangeRateApi {
                 .uri(path)
                 .retrieve()
                 .onStatus(
+                        status -> status.value()==HttpStatus.NOT_FOUND.value(),
+                        clientResponse -> Mono.empty()
+                )
+                .onStatus(
                         HttpStatusCode::isError,
                         resp -> Mono.error(new UnavailableExchangeRateApiRuntimeException("Frankfurter API Error: " + resp.statusCode())))
                 .bodyToMono(FrankfurterExchangeRateApiResponseDto.class)
                 .timeout(this.apiRequestTimeout)
                 .retryWhen(Retry.backoff(this.apiRequestMaxAttempts, this.apiRequestBackoffDuration)
-                        .filter(RuntimeException.class::isInstance)
+                        .filter(throwable -> !(throwable instanceof WebClientResponseException.NotFound))
                         .doBeforeRetry(retrySignal ->
                                 LOG.warn("Retrying request to Frankfurter exchange rate API... Attempt: " + (retrySignal.totalRetries() + 1)))
                 )
                 .onErrorResume(e -> {
-                    LOG.error("All retries to Frankfurter exchange rate API failed. Error: " + e.getMessage());
+                    if (e instanceof WebClientResponseException.NotFound) {
+                        return Mono.empty();
+                    }
+                    LOG.error("All retries to Frankfurter exchange rate API failed.", e);
                     return Mono.error(
                             makeUnavailableExchangeRateApiRuntimeException()
                     );
@@ -147,7 +162,7 @@ class FrankfurterExchangeRateApi implements ExchangeRateApi {
                     }
                     return Stream.empty();
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private UnavailableExchangeRateApiRuntimeException makeUnavailableExchangeRateApiRuntimeException() {

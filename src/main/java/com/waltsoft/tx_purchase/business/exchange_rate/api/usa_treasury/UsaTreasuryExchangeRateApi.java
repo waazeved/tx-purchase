@@ -25,7 +25,7 @@ import java.util.Optional;
 class UsaTreasuryExchangeRateApi implements ExchangeRateApi {
 
     public static final int MAX_EXCHANGE_RATES_PERIOD_IN_MONTHS = 6;
-    private static final String API_BASE_URL = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1";
+    private static final String API_BASE_URL = "https://apix.fiscaldata.treasury.gov/services/api/fiscal_service/v1";
     private static final String API_PATH = "/accounting/od/rates_of_exchange";
     private static final String FILTER_PARAM = "filter";
     private static final String FIELDS_PARAM = "fields";
