@@ -44,7 +44,7 @@ class FindDtoByIdTest extends ContainerTest {
 
         BigDecimal expectedConvertedAmount = new BigDecimal("205.00");
 
-        Mockito.when(exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE))
+        Mockito.when(exchangeRateService.findByCurrencyAndDate(CURRENCY, DATE))
                 .thenReturn(exchangeRateValueOptional);
 
         PurchaseDto purchaseDto = this.purchaseService.findDtoByIdAndCurrency(id, CURRENCY);
@@ -82,7 +82,7 @@ class FindDtoByIdTest extends ContainerTest {
 
         Optional<BigDecimal> exchangeRateValueOptional = Optional.empty();
 
-        Mockito.when(exchangeRateService.findExchangeRateValueByCurrencyAndDate(CURRENCY, DATE))
+        Mockito.when(exchangeRateService.findByCurrencyAndDate(CURRENCY, DATE))
                 .thenReturn(exchangeRateValueOptional);
 
         Assertions.assertThrows(NoExchangeRateDataRuntimeException.class,

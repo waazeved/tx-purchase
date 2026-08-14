@@ -67,7 +67,7 @@ class PurchaseServiceImpl implements PurchaseService, BasicEntityService<Purchas
         LocalDate date = purchase.getDate();
 
         Optional<BigDecimal> exchangeRateValueOptional =
-                this.exchangeRateService.findExchangeRateValueByCurrencyAndDate(currency, date);
+                this.exchangeRateService.findByCurrencyAndDate(currency, date);
 
         if (exchangeRateValueOptional.isEmpty()) {
             throw new NoExchangeRateDataRuntimeException("There is no exchange rate data available for this date");
