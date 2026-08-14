@@ -1,24 +1,27 @@
-package com.waltsoft.tx_purchase.business.exchange_rate;
+package com.waltsoft.tx_purchase.business.exchange_rate.api.frankfurter;
 
-import com.waltsoft.tx_purchase.business.exchange_rate.data.ExchangeRate;
 import com.waltsoft.tx_purchase.business.exchange_rate.exception.UnavailableExchangeRateApiRuntimeException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.*;
+import org.mockito.Mockito;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
-class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
+@DisplayName("FrankfurterExchangeRateApi.findByCurrencyAndStartDateAndEndDate Tests")
+class FindCurrencyAndStartDateAndEndDateTest {
 
-    public static final String CURRENCY = "Brazil-Real";
+    public static final String CURRENCY = "BRL";
     public static final LocalDate START_DATE = LocalDate.of(2025, 12, 30);
     public static final LocalDate END_DATE = LocalDate.of(2025, 12, 31);
     private MockWebServer mockWebServer;
-    private ExchangeRateServiceImpl exchangeRateService;
+    private FrankfurterExchangeRateApi exchangeRateApi;
 
     @BeforeEach
     void initialize() throws IOException {
@@ -33,7 +36,10 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
         int apiRequestMaxAttempts = 3;
         Duration apiRequestBackoffDuration = Duration.ofMillis(10);
 
-        this.exchangeRateService = new ExchangeRateServiceImpl(webClient, apiRequestTimeout, apiRequestMaxAttempts, apiRequestBackoffDuration);
+        FrankfurterCurrencyCodeConverter currencyCodeConverter = Mockito.mock(FrankfurterCurrencyCodeConverter.class);
+        Mockito.when(currencyCodeConverter.convert(CURRENCY)).thenReturn(Optional.of("BRL"));
+
+        this.exchangeRateApi = new FrankfurterExchangeRateApi(webClient, apiRequestTimeout, apiRequestMaxAttempts, apiRequestBackoffDuration, currencyCodeConverter);
     }
 
     @AfterEach
@@ -45,15 +51,15 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
     @DisplayName("Should find exchange rates from API and return list of rates with success")
     void shouldReturnExchangeRatesWithSuccess() {
 
-        String rate1 = "5.01";
-        String rate2 = "4.85";
+        BigDecimal rate1 = new BigDecimal("5.01");
+        BigDecimal rate2 = new BigDecimal("4.85");
 
         String jsonResponse = """
                  {
-                     "data": [
-                         {"record_date": "%s", "exchange_rate": "%s" },
-                         {"record_date": "%s", "exchange_rate": "%s"}
-                     ]
+                     "rates": {
+                         "%s": { "BRL": %s },
+                         "%s": { "BRL": %s }
+                     }
                  }
                 """.formatted(START_DATE, rate1, END_DATE, rate2);
 
@@ -61,15 +67,15 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
                 .setBody(jsonResponse)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> exchangeRates = exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
+        List<FrankfurterExchangeRateDto> exchangeRates = exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
                 CURRENCY,
                 START_DATE, END_DATE);
 
         Assertions.assertNotNull(exchangeRates);
         Assertions.assertEquals(2, exchangeRates.size());
 
-        ExchangeRate exchangeRate1 = exchangeRates.get(0);
-        ExchangeRate exchangeRate2 = exchangeRates.get(1);
+        FrankfurterExchangeRateDto exchangeRate1 = exchangeRates.get(0);
+        FrankfurterExchangeRateDto exchangeRate2 = exchangeRates.get(1);
 
         Assertions.assertEquals(rate1, exchangeRate1.value());
         Assertions.assertEquals(START_DATE, exchangeRate1.date());
@@ -86,14 +92,14 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
         mockWebServer.enqueue(new MockResponse()
                 .setBody("""
                         {
-                          "data": [
-                            {"record_date": "2023-12-31", "exchange_rate": "4.85"}
-                          ]
+                          "rates": {
+                            "2023-12-31": { "BRL": 4.85 }
+                          }
                         }
                         """)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> result = exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
+        List<FrankfurterExchangeRateDto> result = exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
                 CURRENCY, START_DATE, END_DATE);
 
         Assertions.assertEquals(1, result.size());
@@ -105,11 +111,11 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
     void shouldReturnEmptyListWhenNoDataFound() {
         mockWebServer.enqueue(new MockResponse()
                 .setBody("""
-                        {"data": []}
+                        {"rates": {}}
                         """)
                 .addHeader("Content-Type", "application/json"));
 
-        List<ExchangeRate> result = exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
+        List<FrankfurterExchangeRateDto> result = exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
                 CURRENCY, START_DATE, END_DATE);
 
         Assertions.assertNotNull(result);
@@ -125,9 +131,21 @@ class FindExchangeRatesFromApiByCurrencyAndStartDateAndEndDateTest {
         mockWebServer.enqueue(new MockResponse().setResponseCode(500));
 
         Assertions.assertThrows(UnavailableExchangeRateApiRuntimeException.class,
-                () -> exchangeRateService.findExchangeRatesFromApiByCurrencyAndStartDateAndEndDate(
+                () -> exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
                         CURRENCY, START_DATE, END_DATE));
 
         Assertions.assertEquals(4, mockWebServer.getRequestCount());
+    }
+
+    @Test
+    @DisplayName("Should return empty list when API returns 404 Not Found")
+    void shouldReturnEmptyListWhenApiReturns404() {
+        mockWebServer.enqueue(new MockResponse().setResponseCode(404));
+
+        List<FrankfurterExchangeRateDto> result = exchangeRateApi.findByCurrencyAndStartDateAndEndDate(
+                CURRENCY, START_DATE, END_DATE);
+
+        Assertions.assertNotNull(result);
+        Assertions.assertTrue(result.isEmpty());
     }
 }
