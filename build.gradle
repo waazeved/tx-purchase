@@ -40,6 +40,11 @@ dependencies {
     implementation 'com.github.ben-manes.caffeine:caffeine:3.2.4'
     implementation 'org.springframework:spring-context-support:7.0.7'
 
+    // 👉 ADICIONE ESTAS 3 LINHAS PARA O PLUGIN DO LIQUIBASE FUNCIONAR
+    liquibaseRuntime 'org.liquibase:liquibase-core'
+    liquibaseRuntime 'org.postgresql:postgresql'
+    liquibaseRuntime 'info.picocli:picocli:4.7.5'
+
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
@@ -109,4 +114,70 @@ tasks.named('check') {
 
 gitHooks {
     hooks = ['pre-commit': 'check']
+}
+
+tasks.register('cleanTempDb', Exec) {
+    commandLine 'docker', 'rm', '-f', 'mermaid-temp-db'
+    ignoreExitValue = true
+}
+
+tasks.register('stopTempDb', Exec) {
+    commandLine 'docker', 'rm', '-f', 'mermaid-temp-db'
+    ignoreExitValue = true
+}
+
+tasks.register('startTempDb', Exec) {
+    dependsOn 'cleanTempDb'
+    commandLine 'docker', 'run', '--name', 'mermaid-temp-db',
+            '-e', 'POSTGRES_USER=usr',
+            '-e', 'POSTGRES_PASSWORD=pwd',
+            '-e', 'POSTGRES_DB=mydb',
+            '-p', '54332:5432',
+            '-d', 'postgres:15-alpine'
+
+    doLast {
+        println "Waiting for Postgres to start..."
+        sleep(4000)
+    }
+}
+
+tasks.register('runLiquibase', JavaExec) {
+    dependsOn 'startTempDb'
+
+    mainClass = 'liquibase.integration.commandline.LiquibaseCommandLine'
+
+    classpath = configurations.liquibaseRuntime + files('src/main/resources')
+
+    def resourcesDir = project.file('src/main/resources').absolutePath
+
+    args = [
+            '--url=jdbc:postgresql://localhost:54332/mydb',
+            '--username=usr',
+            '--password=pwd',
+            "--searchPath=${resourcesDir}", '--changeLogFile=db/changelog/changelog-master.xml',
+            'update'
+    ]
+}
+
+tasks.register('generateMermaid', Exec) {
+    group = 'documentation'
+    description = 'Generates the Mermaid diagram dynamically via Go Alpine Docker'
+
+    dependsOn 'runLiquibase'
+
+    def buildDir = layout.buildDirectory.get().asFile.absolutePath
+
+    commandLine 'docker', 'run', '--rm',
+            '--link', 'mermaid-temp-db:db',
+            '-v', "${rootDir}:/workspace",
+            'golang:alpine',
+            'sh', '-c',
+            'apk add --no-cache git && go install github.com/KarnerTh/mermerd@latest && /go/bin/mermerd -c postgresql://usr:pwd@db:5432/mydb --schema public --useAllTables --outputFileName /workspace/database-diagram.mmd'
+
+    finalizedBy 'stopTempDb'
+
+    doLast {
+        println "Diagram generated successfully without installing anything!"
+        println "Check the file at: build/database-diagram.mmd"
+    }
 }

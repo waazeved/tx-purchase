@@ -1,0 +1,34 @@
+erDiagram
+    databasechangelog {
+        character_varying author 
+        character_varying comments 
+        character_varying contexts 
+        timestamp_without_time_zone dateexecuted 
+        character_varying deployment_id 
+        character_varying description 
+        character_varying exectype 
+        character_varying filename 
+        character_varying id 
+        character_varying labels 
+        character_varying liquibase 
+        character_varying md5sum 
+        integer orderexecuted 
+        character_varying tag 
+    }
+
+    databasechangeloglock {
+        integer id PK 
+        boolean locked 
+        character_varying lockedby 
+        timestamp_without_time_zone lockgranted 
+    }
+
+    purchase {
+        numeric amount 
+        timestamp_without_time_zone created_at 
+        date date 
+        character_varying description 
+        uuid id PK 
+        timestamp_without_time_zone updated_at 
+    }
+
