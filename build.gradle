@@ -161,11 +161,17 @@ tasks.register('runLiquibase', JavaExec) {
 
 tasks.register('generateMermaid', Exec) {
     group = 'documentation'
-    description = 'Generates the Mermaid diagram dynamically via Go Alpine Docker'
+    description = 'Generates Mermaid diagram if migrations are staged for commit'
 
     dependsOn 'runLiquibase'
 
-    def buildDir = layout.buildDirectory.get().asFile.absolutePath
+    def rootDir = layout.projectDirectory.asFile.absolutePath
+    def diagramFile = file('database-diagram.mmd')
+
+    onlyIf {
+        def stagedFiles = "git diff --cached --name-only -- src/main/resources/db/changelog".execute().text.trim()
+        return !stagedFiles.isEmpty() || !diagramFile.exists()
+    }
 
     commandLine 'docker', 'run', '--rm',
             '--link', 'mermaid-temp-db:db',
@@ -177,7 +183,8 @@ tasks.register('generateMermaid', Exec) {
     finalizedBy 'stopTempDb'
 
     doLast {
-        println "Diagram generated successfully without installing anything!"
-        println "Check the file at: build/database-diagram.mmd"
+        // Correção: Executa o git add usando o interpretador de comando nativo do Groovy
+        "git add database-diagram.mmd".execute()
+        println "✅ Diagram generated and staged for commit!"
     }
 }

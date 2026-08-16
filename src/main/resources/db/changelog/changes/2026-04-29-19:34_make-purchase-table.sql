@@ -9,6 +9,7 @@ CREATE TABLE purchase
     description     VARCHAR(50)    NOT NULL,
     date       DATE           NOT NULL,
     amount DECIMAL(19, 2) NOT NULL,
+    test_2 TEXT,
     CONSTRAINT purchase_pk PRIMARY KEY (id)
 );
 
